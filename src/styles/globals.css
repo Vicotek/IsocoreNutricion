@@ -1,10 +1,39 @@
 :root {
   color-scheme: light;
-  font-family: 'Manrope', sans-serif;
-  background: #F8F7F2;
-  color: #11221C;
+  font-family: 'Inter', -apple-system, 'SF Pro Text', system-ui, 'Manrope', sans-serif;
+  background: #184A3A;
+  color: #1F2833;
   font-size: 16px;
   line-height: 1.6;
+  /* Design system — Master Prompt V1.0 */
+  --background: #184A3A;
+  --surface: #FFFFFF;
+  --surface-rgb: 255, 255, 255;
+  --card: #FFFFFF;
+  --brand: #184A3A;
+  --brand-rgb: 24, 74, 58;
+  --brand-mid: #2D6A4F;
+  --brand-mid-rgb: 45, 106, 79;
+  --brand-600: #2D6A4F;
+  --accent: #8CC63F;
+  --accent-rgb: 140, 198, 63;
+  --text-primary: #1F2833;
+  --text-primary-rgb: 31, 40, 51;
+  --text-secondary: #6B7280;
+  --border: #EAEAEA;
+  --radius-card: 20px;
+  --radius-control: 12px;
+  --shadow-brand: 0 4px 20px rgba(24, 74, 58, 0.06);
+  --space: 8px;
+  --shadow: rgba(var(--text-primary-rgb), 0.06);
+  --shadow-soft: rgba(var(--text-primary-rgb), 0.05);
+  --shadow-strong: rgba(var(--text-primary-rgb), 0.08);
+  --surface-faint: rgba(var(--surface-rgb), 0.12);
+  --surface-overlay: rgba(var(--surface-rgb), 0.18);
+  --brand-mid-faint: rgba(var(--brand-mid-rgb), 0.1);
+  --brand-mid-faint-strong: rgba(var(--brand-mid-rgb), 0.12);
+  --accent-faint: rgba(var(--accent-rgb), 0.12);
+  --accent-shadow: rgba(var(--accent-rgb), 0.22);
 }
 
 * {
@@ -14,7 +43,7 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: #F8F7F2;
+  background: var(--background);
 }
 
 body {
@@ -33,4 +62,5 @@ img {
 .app-shell {
   min-height: 100vh;
   padding: 32px;
+  background: var(--background);
 }

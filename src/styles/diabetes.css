@@ -1,0 +1,514 @@
+/**
+ * Diabetes — Programa de nutrición para diabéticos
+ * Reutiliza los tokens ya definidos en globals.css/home.css (color, radios,
+ * sombras, tipografía). No se define ningún color nuevo aquí.
+ */
+
+.diabetes-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  background: var(--background);
+}
+
+.diabetes-header {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.diabetes-eyebrow {
+  margin: 0;
+  font-size: clamp(0.75rem, 1vw, 0.875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.diabetes-title {
+  margin: 6px 0 0;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.diabetes-subtitle {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+  max-width: 60ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Vista bloqueada (programa_diabetes_activo = false) ── */
+
+.diabetes-locked-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  box-shadow: var(--shadow-brand, 0 4px 20px rgba(24, 74, 58, 0.06));
+  padding: 40px 32px;
+  text-align: center;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.diabetes-locked-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-mid-faint);
+  color: var(--brand);
+}
+
+.diabetes-locked-card h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--text-primary);
+}
+
+.diabetes-locked-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  max-width: 50ch;
+}
+
+/* ── Formulario multi-paso ── */
+
+.diabetes-form-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  box-shadow: var(--shadow-brand, 0 4px 20px rgba(24, 74, 58, 0.06));
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+}
+
+.diabetes-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diabetes-step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.diabetes-step-dot.active {
+  background: var(--brand);
+}
+
+.diabetes-step-dot.done {
+  background: var(--accent);
+}
+
+.diabetes-step-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+}
+
+.diabetes-step-title {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+  color: var(--text-primary);
+}
+
+.diabetes-field-group {
+  display: grid;
+  gap: 16px;
+}
+
+.diabetes-field {
+  display: grid;
+  gap: 6px;
+}
+
+.diabetes-field label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diabetes-field input,
+.diabetes-field select,
+.diabetes-field textarea {
+  padding: 12px 14px;
+  border-radius: var(--radius-control, 12px);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.diabetes-field input:focus,
+.diabetes-field select:focus,
+.diabetes-field textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-mid-faint);
+}
+
+.diabetes-field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.diabetes-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.diabetes-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.diabetes-chip {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.diabetes-chip.selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #FFFFFF;
+}
+
+.diabetes-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.diabetes-save-status {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ── Documentos ── */
+
+.diabetes-upload {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-control, 12px);
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.diabetes-doc-list {
+  display: grid;
+  gap: 8px;
+}
+
+.diabetes-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 12px);
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+/* ── Badges de estado del plan (mismo lenguaje que status-pill del home) ── */
+
+.diabetes-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.diabetes-status-pill.estado-generado_ia {
+  background: var(--brand-mid-faint);
+  color: var(--brand-mid);
+}
+
+.diabetes-status-pill.estado-en_revision {
+  background: rgba(255, 193, 7, 0.15);
+  color: #b8860b;
+}
+
+.diabetes-status-pill.estado-aprobado,
+.diabetes-status-pill.estado-enviado {
+  background: var(--accent-faint);
+  color: var(--brand);
+}
+
+.diabetes-status-pill.estado-rechazado {
+  background: rgba(244, 67, 54, 0.12);
+  color: #c0392b;
+}
+
+.diabetes-status-pill.estado-archivado {
+  background: var(--border);
+  color: var(--text-secondary);
+}
+
+/* ── Panel del plan actual ── */
+
+.diabetes-plan-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  box-shadow: var(--shadow-brand, 0 4px 20px rgba(24, 74, 58, 0.06));
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .diabetes-row {
+    grid-template-columns: 1fr;
+  }
+
+  .diabetes-form-card,
+  .diabetes-locked-card,
+  .diabetes-plan-card {
+    padding: 20px;
+  }
+}
+
+/* ── Revisión clínica (panel admin — reutiliza tokens, no admin.css) ── */
+
+.revision-case-item {
+  cursor: pointer;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.revision-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.revision-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+  color: var(--text-primary);
+}
+
+.revision-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.revision-back-btn {
+  background: none;
+  border: none;
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.revision-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.revision-summary-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+  position: sticky;
+  top: 16px;
+}
+
+.revision-summary-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.revision-summary-row {
+  display: grid;
+  gap: 2px;
+}
+
+.revision-summary-row .label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.revision-summary-row .value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.revision-content {
+  display: grid;
+  gap: 16px;
+}
+
+.revision-alert {
+  background: rgba(244, 67, 54, 0.08);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: var(--radius-control, 12px);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.revision-alert h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #c0392b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.revision-alert p,
+.revision-alert li {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.revision-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.revision-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.revision-block-label {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.revision-sources-toggle {
+  background: var(--brand-mid-faint);
+  color: var(--brand-mid);
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.revision-sources-list {
+  display: none;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control, 12px);
+  background: var(--surface);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.revision-sources-list.open {
+  display: grid;
+}
+
+.revision-block-textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control, 12px);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--surface);
+  resize: vertical;
+}
+
+.revision-block-textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-mid-faint);
+}
+
+.revision-comentarios {
+  display: grid;
+  gap: 6px;
+}
+
+.revision-comentarios label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.revision-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .revision-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .revision-summary-card {
+    position: static;
+  }
+}
