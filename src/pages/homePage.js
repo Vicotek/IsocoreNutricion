@@ -1750,7 +1750,7 @@ function initHomeInteractions(t) {
         RecipesService.initializeRecipesService(user.email);
         
         // ── Inicializar EducationalModulesService ──
-        EducationalModulesService.initializeEducationalModulesService();
+        await EducationalModulesService.getEducationalModules();
         
         // ── Inicializar NutritionalPlansService ──
         NutritionalPlansService.initializeNutritionalPlansService(user.email);
@@ -2295,7 +2295,7 @@ export async function renderHomePage() {
     AdminService.initializeAdminService(persistedUser.email, userRole);
     injectAdminHeaderLink(userRole);
     RecipesService.initializeRecipesService(persistedUser.email);
-    EducationalModulesService.initializeEducationalModulesService();
+    await EducationalModulesService.getEducationalModules();
     NutritionalPlansService.initializeNutritionalPlansService(persistedUser.email);
     ProtocolsService.initializeProtocolsService();
     ConditionsService.initializeConditionsService();

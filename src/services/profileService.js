@@ -9,6 +9,24 @@ import { API_URL, AUTH_HEADER } from './supabaseClient.js';
 let currentProfile = null;
 let currentUserEmail = null;
 
+function normalizeProfileRow(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id || null,
+    email: row.email || '',
+    full_name: row.full_name || row.nombre || row.name || '',
+    avatar_url: row.avatar_url || '',
+    bio: row.bio || '',
+    nutritional_goal: row.nutritional_goal || row.objective || 'general',
+    active_plan: row.active_plan || row.plan || 'free',
+    language: row.language || 'es',
+    notifications_enabled: row.notifications_enabled ?? true,
+    created_at: row.created_at || null,
+    updated_at: row.updated_at || null
+  };
+}
+
 /**
  * Inicializar servicio de perfil
  * @param {string} userEmail - Email del usuario autenticado
@@ -34,7 +52,7 @@ async function loadUserProfile() {
     console.log('📥 Cargando perfil del usuario...');
     
     const response = await fetch(
-      `${API_URL}/profiles?email=eq.${encodeURIComponent(currentUserEmail)}`,
+      `${API_URL}/usuarios_publicas?email=eq.${encodeURIComponent(currentUserEmail)}&select=*`,
       {
         method: 'GET',
         headers: AUTH_HEADER
@@ -49,7 +67,7 @@ async function loadUserProfile() {
     const profiles = await response.json();
     
     if (profiles.length > 0) {
-      currentProfile = profiles[0];
+      currentProfile = normalizeProfileRow(profiles[0]);
       console.log('✅ Perfil cargado:', currentProfile);
       cacheProfile();
       return currentProfile;
@@ -67,34 +85,36 @@ async function loadUserProfile() {
  */
 async function createDefaultProfile() {
   try {
-    const newProfile = {
+    const newProfile = normalizeProfileRow({
       email: currentUserEmail,
       full_name: '',
       avatar_url: '',
       bio: '',
-      nutritional_goal: 'general', // general, weight_loss, muscle_gain, performance
-      active_plan: 'free', // free, premium, vip
-      language: 'es', // es, en, pt
+      nutritional_goal: 'general',
+      active_plan: 'free',
+      language: 'es',
       notifications_enabled: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    };
-
-    const response = await fetch(`${API_URL}/profiles`, {
-      method: 'POST',
-      headers: AUTH_HEADER,
-      body: JSON.stringify(newProfile)
     });
 
-    if (response.ok) {
-      const created = await response.json();
-      currentProfile = created[0] || newProfile;
-      cacheProfile();
-      console.log('✅ Perfil creado:', currentProfile);
-      return currentProfile;
-    }
+    currentProfile = newProfile;
+    cacheProfile();
+    console.log('✅ Perfil por defecto preparado en local:', currentProfile);
+    return currentProfile;
   } catch (error) {
     console.error('❌ Error creando perfil:', error);
+    currentProfile = normalizeProfileRow({
+      email: currentUserEmail,
+      full_name: '',
+      avatar_url: '',
+      bio: '',
+      nutritional_goal: 'general',
+      active_plan: 'free',
+      language: 'es',
+      notifications_enabled: true
+    });
+    cacheProfile();
   }
 }
 
@@ -136,7 +156,7 @@ export function getProfile() {
  * @returns {Promise<Object>} - Perfil actualizado
  */
 export async function updateProfile(updates) {
-  if (!currentProfile?.id) {
+  if (!currentUserEmail) {
     console.error('❌ Perfil no inicializado');
     return null;
   }
@@ -150,7 +170,7 @@ export async function updateProfile(updates) {
     };
 
     const response = await fetch(
-      `${API_URL}/profiles?id=eq.${currentProfile.id}`,
+      `${API_URL}/usuarios?email=eq.${encodeURIComponent(currentUserEmail)}`,
       {
         method: 'PATCH',
         headers: AUTH_HEADER,
@@ -162,7 +182,7 @@ export async function updateProfile(updates) {
       throw new Error('Error actualizando perfil');
     }
 
-    currentProfile = { ...currentProfile, ...profileUpdate };
+    currentProfile = normalizeProfileRow({ ...currentProfile, ...profileUpdate });
     cacheProfile();
     console.log('✅ Perfil actualizado:', currentProfile);
     return currentProfile;
@@ -228,7 +248,7 @@ export async function getFavorites() {
     console.log('❤️ Obteniendo favoritos...');
     
     const response = await fetch(
-      `${API_URL}/favorites?user_email=eq.${encodeURIComponent(currentUserEmail)}`,
+      `${API_URL}/favorites?email=eq.${encodeURIComponent(currentUserEmail)}`,
       {
         method: 'GET',
         headers: AUTH_HEADER
@@ -258,7 +278,7 @@ export async function getHistory(limit = 20) {
     console.log('📜 Obteniendo historial...');
     
     const response = await fetch(
-      `${API_URL}/history?user_email=eq.${encodeURIComponent(currentUserEmail)}&order=created_at.desc&limit=${limit}`,
+      `${API_URL}/user_activity?email=eq.${encodeURIComponent(currentUserEmail)}&order=created_at.desc&limit=${limit}`,
       {
         method: 'GET',
         headers: AUTH_HEADER
@@ -287,7 +307,7 @@ export async function getNotifications() {
     console.log('🔔 Obteniendo notificaciones...');
     
     const response = await fetch(
-      `${API_URL}/notifications?user_email=eq.${encodeURIComponent(currentUserEmail)}&read=eq.false&order=created_at.desc`,
+      `${API_URL}/notifications?email=eq.${encodeURIComponent(currentUserEmail)}&read=eq.false&order=created_at.desc`,
       {
         method: 'GET',
         headers: AUTH_HEADER
