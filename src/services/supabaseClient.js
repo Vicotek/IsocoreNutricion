@@ -350,18 +350,20 @@ export async function saveFavoriteToSupabase(email, favorite) {
  * @param {number} offset - Offset para paginación
  * @returns {Promise<Array>} - Array de artículos
  */
-function normalizeArticleRow(row) {
+function normalizeArticleRow(row, language = 'es') {
   if (!row) return row;
   const content = row.contenido || '';
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
-  const summary = row.resumen || (content ? `${content.slice(0, 180)}${content.length > 180 ? '…' : ''}` : '');
+  const titulo = (language !== 'es' && row[`titulo_${language}`]) || row.titulo;
+  const resumenLocalized = (language !== 'es' && row[`resumen_${language}`]) || row.resumen;
+  const summary = resumenLocalized || (content ? `${content.slice(0, 180)}${content.length > 180 ? '…' : ''}` : '');
 
   return {
     id: row.id,
-    title: row.titulo,
+    title: titulo,
     summary,
-    description: row.resumen || '',
+    description: resumenLocalized || '',
     excerpt: summary,
     content,
     category: row.categoria,
@@ -510,11 +512,11 @@ export async function getArticlesByCategoryFromSupabase(category) {
  * @param {Object} row - Fila cruda de Supabase
  * @returns {Object} - Receta normalizada
  */
-function normalizeRecipeRow(row) {
+function normalizeRecipeRow(row, language = 'es') {
   if (!row) return row;
   return {
     id: row.id,
-    title: row.nombre_es,
+    title: (language !== 'es' && row[`nombre_${language}`]) || row.nombre_es,
     name_ca: row.nombre_ca,
     name_en: row.nombre_en,
     category: row.categoria,
@@ -538,7 +540,7 @@ function normalizeRecipeRow(row) {
   };
 }
 
-export async function getRecipesFromSupabase(limit = 999, offset = 0) {
+export async function getRecipesFromSupabase(limit = 999, offset = 0, language = 'es') {
   try {
     console.log('🍽️ Obteniendo recetas desde Supabase...');
 
@@ -557,7 +559,7 @@ export async function getRecipesFromSupabase(limit = 999, offset = 0) {
 
     const data = await response.json();
     console.log(`✅ ${data.length || 0} recetas obtenidas`);
-    return Array.isArray(data) ? data.map(normalizeRecipeRow) : [];
+    return Array.isArray(data) ? data.map((row) => normalizeRecipeRow(row, language)) : [];
   } catch (error) {
     console.error('❌ Error obteniendo recetas:', error);
     return [];
@@ -685,13 +687,13 @@ export async function filterRecipesInSupabase(filters = {}) {
  * Normaliza una fila real de `modulos_educativos` (titulo, descripcion,
  * orden, activo) a los campos genéricos que usa el resto de la app.
  */
-function normalizeModuleRow(row) {
+function normalizeModuleRow(row, language = 'es') {
   if (!row) return row;
   return {
     id: row.id,
     slug: row.slug,
-    title: row.titulo,
-    description: row.descripcion,
+    title: (language !== 'es' && row[`titulo_${language}`]) || row.titulo,
+    description: (language !== 'es' && row[`descripcion_${language}`]) || row.descripcion,
     order_index: row.orden,
     category: row.categoria,
     active: row.activo !== false,
@@ -700,7 +702,7 @@ function normalizeModuleRow(row) {
   };
 }
 
-export async function getEducationalModulesFromSupabase(status = 'published') {
+export async function getEducationalModulesFromSupabase(status = 'published', language = 'es') {
   try {
     console.log('📚 Obteniendo módulos educativos desde Supabase...');
 
@@ -722,7 +724,7 @@ export async function getEducationalModulesFromSupabase(status = 'published') {
 
     const data = await response.json();
     console.log(`✅ ${data.length || 0} módulos educativos obtenidos`);
-    return Array.isArray(data) ? data.map(normalizeModuleRow) : [];
+    return Array.isArray(data) ? data.map((row) => normalizeModuleRow(row, language)) : [];
   } catch (error) {
     console.error('❌ Error obteniendo módulos educativos:', error);
     return [];
@@ -833,14 +835,16 @@ export async function getNutritionalPlanFromSupabase(planId) {
  * Normaliza una fila real de `protocolos` (nombre, descripcion, objetivo,
  * evidencia, activo) a los campos genéricos que usa el resto de la app.
  */
-function normalizeProtocolRow(row) {
+function normalizeProtocolRow(row, language = 'es') {
   if (!row) return row;
+  const nombre = (language !== 'es' && row[`nombre_${language}`]) || row.nombre;
+  const descripcion = (language !== 'es' && row[`descripcion_${language}`]) || row.descripcion;
   return {
     id: row.id,
-    name: row.nombre,
-    title: row.nombre,
-    description: row.descripcion,
-    content: row.descripcion || '',
+    name: nombre,
+    title: nombre,
+    description: descripcion,
+    content: descripcion || '',
     objective: row.objetivo,
     evidence: row.evidencia,
     active: row.activo !== false,
@@ -849,7 +853,7 @@ function normalizeProtocolRow(row) {
   };
 }
 
-export async function getProtocolsFromSupabase(limit = 999, offset = 0) {
+export async function getProtocolsFromSupabase(limit = 999, offset = 0, language = 'es') {
   try {
     console.log('🔬 Obteniendo protocolos desde Supabase...');
 
@@ -868,7 +872,7 @@ export async function getProtocolsFromSupabase(limit = 999, offset = 0) {
 
     const data = await response.json();
     console.log(`✅ ${data.length || 0} protocolos obtenidos`);
-    return Array.isArray(data) ? data.map(normalizeProtocolRow) : [];
+    return Array.isArray(data) ? data.map((row) => normalizeProtocolRow(row, language)) : [];
   } catch (error) {
     console.error('❌ Error obteniendo protocolos:', error);
     return [];
@@ -1232,7 +1236,7 @@ export async function getReferencesBySupplementFromSupabase(supplementId) {
  * @param {number} limit - Número máximo de artículos a retornar
  * @returns {Promise<Array>} - Array de artículos destacados
  */
-export async function getFeaturedArticlesFromSupabase(limit = 5) {
+export async function getFeaturedArticlesFromSupabase(limit = 5, language = 'es') {
   try {
     console.log('⭐ Obteniendo artículos destacados...');
 
@@ -1251,7 +1255,7 @@ export async function getFeaturedArticlesFromSupabase(limit = 5) {
     }
 
     const data = await response.json();
-    return Array.isArray(data) ? data.map(normalizeArticleRow) : [];
+    return Array.isArray(data) ? data.map((row) => normalizeArticleRow(row, language)) : [];
   } catch (error) {
     console.error('❌ Error obteniendo artículos destacados:', error);
     return [];

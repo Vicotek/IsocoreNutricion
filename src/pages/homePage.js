@@ -75,13 +75,43 @@ const FREE_PLAN_CONFIG = {
 
 // Slides del carrusel hero — config, nunca hardcodeado en el componente.
 // Imágenes V1 provisionales; sustituir "image" más adelante sin tocar lógica.
+// Texto por idioma (es/en/ca) — getHeroSlideText() cae a "es" si falta alguno.
 const heroSlides = [
-  { tag: 'Plato saludable', image: './src/assets/stock/hero-plato-saludable.jpg', title: 'Nutrición basada en evidencia', subtitle: 'Planes reales, resultados medibles.', cta: 'Empieza Gratis' },
-  { tag: 'Suplemento', image: './src/assets/stock/hero-suplemento.jpg', title: 'Suplementación con criterio', subtitle: 'Solo lo que tu cuerpo necesita, con respaldo científico.', cta: 'Empieza Gratis' },
-  { tag: 'Ebook / Infoproducto', image: './src/assets/stock/hero-ebook.jpg', title: 'Recursos para llevar', subtitle: 'Guías y materiales descargables, siempre a mano.', cta: 'Empieza Gratis' },
-  { tag: 'Personal y profesional', image: './src/assets/stock/Experta.png', title: 'Tu experta nutricional', subtitle: 'Respuestas claras, cuando las necesitas.', cta: 'Empieza Gratis' },
-  { tag: 'Plan nutricional', image: './src/assets/stock/hero-plan-nutricional.jpg', title: 'Un plan hecho para ti', subtitle: 'Ajustado a tus objetivos y tu día a día.', cta: 'Empieza Gratis' }
+  {
+    image: './src/assets/stock/hero-plato-saludable.jpg',
+    es: { tag: 'Plato saludable', title: 'Nutrición basada en evidencia', subtitle: 'Planes reales, resultados medibles.', cta: 'Empieza Gratis' },
+    en: { tag: 'Healthy plate', title: 'Evidence-based nutrition', subtitle: 'Real plans, measurable results.', cta: 'Start Free' },
+    ca: { tag: 'Plat saludable', title: 'Nutrició basada en evidència', subtitle: 'Plans reals, resultats mesurables.', cta: 'Comença Gratis' }
+  },
+  {
+    image: './src/assets/stock/hero-suplemento.jpg',
+    es: { tag: 'Suplemento', title: 'Suplementación con criterio', subtitle: 'Solo lo que tu cuerpo necesita, con respaldo científico.', cta: 'Empieza Gratis' },
+    en: { tag: 'Supplement', title: 'Supplementation with criteria', subtitle: 'Only what your body needs, backed by science.', cta: 'Start Free' },
+    ca: { tag: 'Suplement', title: 'Suplementació amb criteri', subtitle: 'Només el que el teu cos necessita, amb suport científic.', cta: 'Comença Gratis' }
+  },
+  {
+    image: './src/assets/stock/hero-ebook.jpg',
+    es: { tag: 'Ebook / Infoproducto', title: 'Recursos para llevar', subtitle: 'Guías y materiales descargables, siempre a mano.', cta: 'Empieza Gratis' },
+    en: { tag: 'Ebook / Resource', title: 'Resources to go', subtitle: 'Downloadable guides and materials, always at hand.', cta: 'Start Free' },
+    ca: { tag: 'Ebook / Recurs', title: 'Recursos per emportar', subtitle: 'Guies i materials descarregables, sempre a mà.', cta: 'Comença Gratis' }
+  },
+  {
+    image: './src/assets/stock/Experta.png',
+    es: { tag: 'Personal y profesional', title: 'Tu experta nutricional', subtitle: 'Respuestas claras, cuando las necesitas.', cta: 'Empieza Gratis' },
+    en: { tag: 'Personal and professional', title: 'Your nutrition expert', subtitle: 'Clear answers, when you need them.', cta: 'Start Free' },
+    ca: { tag: 'Personal i professional', title: 'La teva experta en nutrició', subtitle: 'Respostes clares, quan les necessites.', cta: 'Comença Gratis' }
+  },
+  {
+    image: './src/assets/stock/hero-plan-nutricional.jpg',
+    es: { tag: 'Plan nutricional', title: 'Un plan hecho para ti', subtitle: 'Ajustado a tus objetivos y tu día a día.', cta: 'Empieza Gratis' },
+    en: { tag: 'Nutrition plan', title: 'A plan made for you', subtitle: 'Tailored to your goals and your everyday life.', cta: 'Start Free' },
+    ca: { tag: 'Pla nutricional', title: 'Un pla fet per a tu', subtitle: 'Ajustat als teus objectius i al teu dia a dia.', cta: 'Comença Gratis' }
+  }
 ];
+
+function getHeroSlideText(slide, language) {
+  return slide[language] || slide.es;
+}
 
 // Imágenes de apoyo para las tarjetas del feed central cuando el contenido
 // de Supabase no trae imagen propia — config, no embebidas en el markup.
@@ -122,6 +152,10 @@ const languageNames = {
 
 const translations = {
   es: {
+    feedArticleLabel: 'Artículo destacado',
+    feedRecipeLabel: 'Receta destacada',
+    feedProtocolLabel: 'Protocolo destacado',
+    feedResourceLabel: 'Recurso destacado',
     brandTag: 'ISOCORE',
     brandSubtitle: 'NUTRICIÓN',
     headerLogoText: 'ISOCORE',
@@ -155,9 +189,9 @@ const translations = {
     summaryTitle: 'Home de producto operativo.',
     summaryText: 'Interfaz construida para uso real: ingreso persistente, navegación clara y coherencia visual del sistema IsoCore.',
     footerEmailTitle: 'Correo electrónico',
-    footerEmailValue: 'isocorefood@gmail.com',
+    footerEmailValue: 'contact@isocore.com',
     footerPhoneTitle: 'Teléfono',
-    footerPhoneValue: '+34 603 000 845',
+    footerPhoneValue: '+34603900845',
     footerAboutTitle: 'Sobre IsoCore',
     footerAboutText: 'Soluciones de nutrición práctica con enfoque clínico y premium.',
     footerPolicyTitle: 'Políticas',
@@ -185,6 +219,25 @@ const translations = {
     emailLabel: 'Correo',
     emailPlaceholder: 'usuario@ejemplo.com',
     loginButton: 'Entrar',
+    registerButton: 'Registrarse',
+    btnRecover: 'Enviar enlace',
+    termsLabel: 'Acepto los terminos y condiciones',
+    termsRequired: 'Debes aceptar los terminos y condiciones.',
+    searchPlaceholder: 'Buscar articulos, recetas, suplementos, recursos...',
+    activeBadge: 'ACTIVO',
+    enterModuleButton: 'Entrar',
+    addToFavoritesTitle: 'Agregar a favoritos',
+    latestPostsTitle: 'Ultimas publicaciones',
+    choosePlanTitle: 'Elige tu plan',
+    freeLabel: 'Gratis',
+    upgradePlanButton: 'Hazte Premium',
+    activityTitle: 'Tu actividad',
+    recentContentTitle: 'Contenido reciente',
+    aiCtaLabel: 'Pregunta a tu asistente nutricional',
+    quickAccessTitle: 'Accesos rapidos',
+    loading: 'Cargando…',
+    loadingSummary: 'Cargando resumen…',
+    loadingFeed: 'Cargando tu feed…',
     sessionActive: 'Sesión activa',
     welcomeGreeting: 'Bienvenido de nuevo,',
     modulesTitle: 'Módulos',
@@ -215,6 +268,10 @@ const translations = {
     languageDropdownLabel: 'Elige idioma'
   },
   en: {
+    feedArticleLabel: 'Featured article',
+    feedRecipeLabel: 'Featured recipe',
+    feedProtocolLabel: 'Featured protocol',
+    feedResourceLabel: 'Featured resource',
     brandTag: 'ISOCORE',
     brandSubtitle: 'NUTRITION',
     headerLogoText: 'ISOCORE',
@@ -250,7 +307,7 @@ const translations = {
     footerEmailTitle: 'Email',
     footerEmailValue: 'contact@isocore.com',
     footerPhoneTitle: 'Phone',
-    footerPhoneValue: '+34 600 000 000',
+    footerPhoneValue: '+34603900845',
     footerAboutTitle: 'About IsoCore',
     footerAboutText: 'Practical nutrition solutions with clinical and premium focus.',
     footerPolicyTitle: 'Policies',
@@ -278,6 +335,25 @@ const translations = {
     emailLabel: 'Email',
     emailPlaceholder: 'user@example.com',
     loginButton: 'Enter',
+    registerButton: 'Sign up',
+    btnRecover: 'Send link',
+    termsLabel: 'I accept the terms and conditions',
+    termsRequired: 'You must accept the terms and conditions.',
+    searchPlaceholder: 'Search articles, recipes, supplements, resources...',
+    activeBadge: 'ACTIVE',
+    enterModuleButton: 'Enter',
+    addToFavoritesTitle: 'Add to favorites',
+    latestPostsTitle: 'Latest posts',
+    choosePlanTitle: 'Choose your plan',
+    freeLabel: 'Free',
+    upgradePlanButton: 'Go Premium',
+    activityTitle: 'Your activity',
+    recentContentTitle: 'Recent content',
+    aiCtaLabel: 'Ask your nutrition assistant',
+    quickAccessTitle: 'Quick access',
+    loading: 'Loading…',
+    loadingSummary: 'Loading summary…',
+    loadingFeed: 'Loading your feed…',
     sessionActive: 'Active session',
     welcomeGreeting: 'Welcome back,',
     modulesTitle: 'Modules',
@@ -303,9 +379,15 @@ const translations = {
     lockedAction: 'This module is locked. Complete the initial experience to unlock it.',
     loginSuccess: 'You are signed in. Your access remains active on this screen.',
     logoutNotice: 'You have signed out. You can log in again at any time.',
-    loginValidation: 'Complete name and email to sign in.',    recoverValidation: 'Please enter your email address.',    languageDropdownLabel: 'Choose language'
+    loginValidation: 'Complete name and email to sign in.',
+    recoverValidation: 'Please enter your email address.',
+    languageDropdownLabel: 'Choose language'
   },
   ca: {
+    feedArticleLabel: 'Article destacat',
+    feedRecipeLabel: 'Recepta destacada',
+    feedProtocolLabel: 'Protocol destacat',
+    feedResourceLabel: 'Recurs destacat',
     brandTag: 'ISOCORE',
     brandSubtitle: 'NUTRICIÓ',
     headerLogoText: 'ISOCORE',
@@ -341,7 +423,7 @@ const translations = {
     footerEmailTitle: 'Correu electrònic',
     footerEmailValue: 'contacte@isocore.com',
     footerPhoneTitle: 'Telèfon',
-    footerPhoneValue: '+34 600 000 000',
+    footerPhoneValue: '+34603900845',
     footerAboutTitle: 'Sobre IsoCore',
     footerAboutText: 'Solucions de nutrició pràctica amb enfoc clínic i premium.',
     footerPolicyTitle: 'Polítiques',
@@ -369,6 +451,25 @@ const translations = {
     emailLabel: 'Correu',
     emailPlaceholder: 'usuari@exemple.com',
     loginButton: 'Entrar',
+    registerButton: 'Registra\'t',
+    btnRecover: 'Envia l\'enllac',
+    termsLabel: 'Accepto els termes i condicions',
+    termsRequired: 'Has d\'acceptar els termes i condicions.',
+    searchPlaceholder: 'Cerca articles, receptes, suplements i recursos...',
+    activeBadge: 'ACTIU',
+    enterModuleButton: 'Entrar',
+    addToFavoritesTitle: 'Afegeix a preferits',
+    latestPostsTitle: 'Ultimes publicacions',
+    choosePlanTitle: 'Tria el teu pla',
+    freeLabel: 'Gratis',
+    upgradePlanButton: 'Fes-te Premium',
+    activityTitle: 'La teva activitat',
+    recentContentTitle: 'Contingut recent',
+    aiCtaLabel: 'Pregunta al teu assistent nutricional',
+    quickAccessTitle: 'Accessos rapids',
+    loading: 'Carregant…',
+    loadingSummary: 'Carregant resum…',
+    loadingFeed: 'Carregant el teu feed…',
     sessionActive: 'Sessió activa',
     welcomeGreeting: 'Benvingut de nou,',
     modulesTitle: 'Mòduls',
@@ -394,7 +495,9 @@ const translations = {
     lockedAction: 'Aquest mòdul està bloquejat. Completa l’experiència inicial per desbloquejar-lo.',
     loginSuccess: 'Has iniciat sessió. El teu accés roman actiu en aquesta pantalla.',
     logoutNotice: 'Has tancat sessió. Pots iniciar sessió de nou en qualsevol moment.',
-    loginValidation: 'Completa el nom i el correu per iniciar sessió.',    recoverValidation: 'Si us plau, introdueix el teu correu electrònic.',    languageDropdownLabel: 'Tria idioma'
+    loginValidation: 'Completa el nom i el correu per iniciar sessió.',
+    recoverValidation: 'Si us plau, introdueix el teu correu electrònic.',
+    languageDropdownLabel: 'Tria idioma'
   }
 };
 
@@ -460,6 +563,20 @@ function updateTexts(t) {
     element.placeholder = t[key];
   });
 
+  // Carrusel hero (columna 1) — su texto vive en heroSlides, no en `t`,
+  // así que se refresca aparte por índice de slide en vez de data-i18n.
+  const language = getCurrentLanguage();
+  document.querySelectorAll('#heroCarousel .hero-slide').forEach((slideEl) => {
+    const i = Number(slideEl.dataset.slideIndex);
+    const slide = heroSlides[i];
+    if (!slide) return;
+    const text = getHeroSlideText(slide, language);
+    slideEl.querySelector('.hero-slide-tag').textContent = text.tag;
+    slideEl.querySelector('.hero-slide-title').textContent = text.title;
+    slideEl.querySelector('.hero-slide-subtitle').textContent = text.subtitle;
+    slideEl.querySelector('.hero-slide-cta').textContent = text.cta;
+  });
+
   renderModuleCards(t);
 
   const persistedUser = getStoredUser();
@@ -497,7 +614,7 @@ function renderHeaderHTML(t, language, user) {
             <input
               id="searchInput"
               type="text"
-              placeholder="Buscar artículos, recetas, suplementos, recursos..."
+              placeholder="${t.searchPlaceholder || 'Buscar articulos, recetas, suplementos, recursos...'}"
               autocomplete="off"
             />
             <button class="search-clear-btn" id="searchClearBtn" type="button" title="Limpiar búsqueda">${getIcon('close', 14)}</button>
@@ -519,20 +636,23 @@ function renderHeaderHTML(t, language, user) {
  * Carrusel hero de la columna izquierda (Landing) — config-driven vía heroSlides.
  * Fade automático cada 7s. Respeta prefers-reduced-motion.
  */
-function renderHeroCarouselHTML() {
+function renderHeroCarouselHTML(language) {
   return `
     <div class="hero-carousel" id="heroCarousel">
-      ${heroSlides.map((slide, i) => `
-        <div class="hero-slide ${i === 0 ? 'on' : ''}">
+      ${heroSlides.map((slide, i) => {
+        const text = getHeroSlideText(slide, language);
+        return `
+        <div class="hero-slide ${i === 0 ? 'on' : ''}" data-slide-index="${i}">
           ${slide.image ? `<img src="${escapeHtml(slide.image)}" alt="" class="hero-slide-image" />` : ''}
           <div class="hero-slide-overlay">
-            <span class="hero-slide-tag">${escapeHtml(slide.tag)}</span>
-            <h2 class="hero-slide-title">${escapeHtml(slide.title)}</h2>
-            <p class="hero-slide-subtitle">${escapeHtml(slide.subtitle)}</p>
-            <button type="button" class="hero-slide-cta" data-hero-cta="${i}">${escapeHtml(slide.cta)}</button>
+            <span class="hero-slide-tag">${escapeHtml(text.tag)}</span>
+            <h2 class="hero-slide-title">${escapeHtml(text.title)}</h2>
+            <p class="hero-slide-subtitle">${escapeHtml(text.subtitle)}</p>
+            <button type="button" class="hero-slide-cta" data-hero-cta="${i}">${escapeHtml(text.cta)}</button>
           </div>
         </div>
-      `).join('')}
+      `;
+      }).join('')}
       <div class="hero-dots">
         ${heroSlides.map((_, i) => `<span class="${i === 0 ? 'on' : ''}" data-dot="${i}" role="button" tabindex="0" aria-label="Ir a la diapositiva ${i + 1}"></span>`).join('')}
       </div>
@@ -617,13 +737,13 @@ function createModuleCard(title, description, moduleName = '', locked = true, t)
         </div>
         <button class="favorite-btn ${isFav ? 'active' : ''}" data-favorite-id="${moduleName}"
                 onclick="window.homePage_toggleFavModule(event, '${moduleName}', '${title}')"
-                title="Agregar a favoritos" type="button">
+                title="${t.addToFavoritesTitle || 'Agregar a favoritos'}" type="button">
           ${getIcon('heart', 16)}
         </button>
       </div>
       <div class="module-footer">
-        <span class="module-badge">${locked ? t.lockedBadge : 'ACTIVO'}</span>
-        <button type="button" class="secondary-button module-action" data-locked="${locked}">${locked ? t.previewButton : 'Entrar'}</button>
+        <span class="module-badge">${locked ? t.lockedBadge : (t.activeBadge || 'ACTIVO')}</span>
+        <button type="button" class="secondary-button module-action" data-locked="${locked}">${locked ? t.previewButton : (t.enterModuleButton || 'Entrar')}</button>
       </div>
     </article>
   `;
@@ -665,10 +785,10 @@ function createDiabetesCardHTML() {
 }
 
 const FEED_SECTIONS = [
-  { type: 'article', label: 'Artículo destacado', fetch: fetchFeaturedArticle },
-  { type: 'recipe', label: 'Receta destacada', fetch: fetchFeaturedRecipe },
-  { type: 'protocol', label: 'Protocolo destacado', fetch: fetchFeaturedProtocol },
-  { type: 'resource', label: 'Recurso destacado', fetch: fetchFeaturedResource }
+  { type: 'article', labelKey: 'feedArticleLabel', fetch: fetchFeaturedArticle },
+  { type: 'recipe', labelKey: 'feedRecipeLabel', fetch: fetchFeaturedRecipe },
+  { type: 'protocol', labelKey: 'feedProtocolLabel', fetch: fetchFeaturedProtocol },
+  { type: 'resource', labelKey: 'feedResourceLabel', fetch: fetchFeaturedResource }
 ];
 
 const TIER_RANK = { free: 0, premium: 1, vip: 2 };
@@ -692,9 +812,9 @@ function truncateText(value, maxLength = 140) {
   return `${text.slice(0, maxLength).trim()}…`;
 }
 
-async function fetchFeaturedArticle() {
+async function fetchFeaturedArticle(language = 'es') {
   try {
-    const articles = await getFeaturedArticlesFromSupabase(1);
+    const articles = await getFeaturedArticlesFromSupabase(1, language);
     const article = articles && articles[0];
     return article ? { ...article, tier: 'free' } : null;
   } catch (error) {
@@ -703,9 +823,9 @@ async function fetchFeaturedArticle() {
   }
 }
 
-async function fetchFeaturedRecipe() {
+async function fetchFeaturedRecipe(language = 'es') {
   try {
-    const recipes = await getRecipesFromSupabase(60);
+    const recipes = await getRecipesFromSupabase(60, 0, language);
     // Selección 100% editorial vía "destacada" en Supabase. Sin fallback:
     // si nadie la marcó, el bloque se omite (nunca "próximamente").
     return recipes.find((recipe) => recipe.featured) || null;
@@ -715,12 +835,12 @@ async function fetchFeaturedRecipe() {
   }
 }
 
-async function fetchFeaturedProtocol() {
+async function fetchFeaturedProtocol(language = 'es') {
   try {
     // "protocolos" no tiene columna editorial de selección ni de nivel de
     // acceso: se usa el más reciente como proxy (acordado, sin tocar esquema)
     // y se trata como contenido premium por defecto.
-    const protocols = await getProtocolsFromSupabase(5);
+    const protocols = await getProtocolsFromSupabase(5, 0, language);
     const protocol = protocols && protocols[0];
     return protocol ? { ...protocol, tier: 'premium' } : null;
   } catch (error) {
@@ -729,11 +849,11 @@ async function fetchFeaturedProtocol() {
   }
 }
 
-async function fetchFeaturedResource() {
+async function fetchFeaturedResource(language = 'es') {
   try {
     // "orden" es el campo editorial ya existente en modulos_educativos:
     // el de menor orden (ya viene ordenado asc) hace de "destacado".
-    const modules = await getEducationalModulesFromSupabase();
+    const modules = await getEducationalModulesFromSupabase('published', language);
     const resource = modules && modules[0];
     return resource ? { ...resource, tier: 'free' } : null;
   } catch (error) {
@@ -848,14 +968,16 @@ function renderNewsList(items) {
  * Carga y renderiza el feed dinámico de la columna central.
  * Modular: cada sección se resuelve y actualiza de forma independiente.
  */
-async function renderCentralFeed() {
+async function renderCentralFeed(language = getCurrentLanguage()) {
   const container = document.getElementById('homeContentFeed');
   if (!container) return;
 
+  const t = translations[language] || translations.es;
+
   await Promise.all(
     FEED_SECTIONS.map(async (section) => {
-      const item = await section.fetch();
-      updateFeedSection(section.type, section.label, item);
+      const item = await section.fetch(language);
+      updateFeedSection(section.type, t[section.labelKey], item);
     })
   );
 
@@ -974,6 +1096,8 @@ function showLockedNotice(message) {
 async function renderDashboard(dashboard) {
   if (!dashboard) return;
 
+  const t = getTranslation();
+
   // Presentación dividida en 2 columnas — misma data de DashboardService,
   // solo cambia dónde se inserta cada parte (izquierda=resumen, centro=feed).
   const summaryEl = document.getElementById('dashboardUserSummary');
@@ -1043,19 +1167,19 @@ async function renderDashboard(dashboard) {
     const cardsHTML = dashboard.cards.map(card => createCardHTML(card)).join('');
     feedEl.innerHTML = `
       <div class="dashboard-feed-block">
-        <h3 class="feed-section-title">Tu actividad</h3>
+        <h3 class="feed-section-title">${t.activityTitle || 'Tu actividad'}</h3>
         <div class="dashboard-cards" id="dashboardCards">
           ${cardsHTML || '<p class="feed-empty">Todavía no tienes actividad ni favoritos guardados.</p>'}
         </div>
       </div>
       <div class="dashboard-feed-block">
-        <h3 class="feed-section-title">Centro Inteligente</h3>
-        <button type="button" class="dashboard-ai-cta" id="dashboardAICta">${getIcon('robot', 18)} Pregunta a tu asistente nutricional</button>
+        <h3 class="feed-section-title">${t.centerTitle || 'Centro Inteligente'}</h3>
+        <button type="button" class="dashboard-ai-cta" id="dashboardAICta">${getIcon('robot', 18)} ${t.aiCtaLabel || 'Pregunta a tu asistente nutricional'}</button>
       </div>
       <div class="dashboard-feed-block feed-news-section">
-        <h3 class="feed-section-title">Contenido reciente</h3>
+        <h3 class="feed-section-title">${t.recentContentTitle || 'Contenido reciente'}</h3>
         <div class="feed-news-list" id="feedNewsList">
-          <p class="feed-loading">Cargando…</p>
+          <p class="feed-loading">${t.loading || 'Cargando…'}</p>
         </div>
       </div>
     `;
@@ -1810,6 +1934,10 @@ function initHomeInteractions(t) {
     const nextTranslation = getTranslation();
     updateLanguageToggle(nextLanguage);
     updateTexts(nextTranslation);
+    // Columna 2: el feed vive en Supabase, así que no basta con swap de
+    // textContent — hay que volver a pedir los datos en el nuevo idioma
+    // (cae a español por fila mientras no haya traducción cargada).
+    renderCentralFeed(nextLanguage);
   });
 
   // ✅ NUEVOS LISTENERS PARA UX CORRECTIONS v1.0
@@ -1959,23 +2087,24 @@ function renderLoginPanelHTML(t) {
  * El CTA reutiliza el flujo de Stripe ya existente (renderPlanSelectionModal + startStripeCheckout).
  */
 function renderPlanComparisonHTML() {
+  const t = getTranslation();
   const plans = [FREE_PLAN_CONFIG, ...StripeService.getAvailablePlans()];
 
   return `
     <div class="home-card plan-comparison-card">
-      <h3 class="feed-section-title">Elige tu plan</h3>
+      <h3 class="feed-section-title">${t.choosePlanTitle || 'Elige tu plan'}</h3>
       <div class="plan-mini-grid">
         ${plans.map(plan => `
           <div class="plan-mini-card ${plan.id !== 'free' ? 'plan-mini-paid' : ''}">
             <span class="plan-mini-name">${escapeHtml(plan.name)}</span>
-            <span class="plan-mini-price">${plan.price > 0 ? `${plan.price.toFixed(2)}€/mes` : 'Gratis'}</span>
+            <span class="plan-mini-price">${plan.price > 0 ? `${plan.price.toFixed(2)}€/mes` : (t.freeLabel || 'Gratis')}</span>
             <ul class="plan-mini-features">
               ${(plan.features || []).slice(0, 2).map(feature => `<li>${escapeHtml(feature)}</li>`).join('')}
             </ul>
           </div>
         `).join('')}
       </div>
-      <button type="button" class="primary-button upgrade-plan-btn" data-action="upgrade-plan">Hazte Premium</button>
+      <button type="button" class="primary-button upgrade-plan-btn" data-action="upgrade-plan">${t.upgradePlanButton || 'Hazte Premium'}</button>
     </div>
   `;
 }
@@ -1989,18 +2118,18 @@ function renderLandingHTML(t, language) {
     <main class="home-root page-shell">
       <section class="landing-grid">
         <div class="landing-col landing-col-hero">
-          ${renderHeroCarouselHTML()}
+          ${renderHeroCarouselHTML(language)}
         </div>
 
         <div class="landing-col landing-col-feed">
           <div class="home-details" id="homeContentFeed">
             ${createDiabetesCardHTML()}
-            ${FEED_SECTIONS.map(section => createFeedCard(null, section.type, section.label, 'loading')).join('')}
+            ${FEED_SECTIONS.map(section => createFeedCard(null, section.type, t[section.labelKey], 'loading')).join('')}
           </div>
           <div class="feed-section feed-news-section">
-            <h3 class="feed-section-title">Últimas publicaciones</h3>
+            <h3 class="feed-section-title">${t.latestPostsTitle || 'Ultimas publicaciones'}</h3>
             <div class="feed-news-list" id="feedNewsList">
-              <p class="feed-loading">Cargando…</p>
+              <p class="feed-loading">${t.loading || 'Cargando…'}</p>
             </div>
           </div>
         </div>
@@ -2026,17 +2155,17 @@ function renderDashboardHTML(t, language, user) {
     <main class="home-root page-shell">
       <section class="landing-grid dashboard-grid">
         <div class="landing-col dashboard-col-summary" id="dashboardUserSummary">
-          <p class="feed-loading">Cargando resumen…</p>
+          <p class="feed-loading">${t.loadingSummary || 'Cargando resumen…'}</p>
         </div>
 
         <div class="landing-col dashboard-col-feed" id="dashboardFeed">
-          <p class="feed-loading">Cargando tu feed…</p>
+          <p class="feed-loading">${t.loadingFeed || 'Cargando tu feed…'}</p>
         </div>
 
         <aside class="landing-col dashboard-col-quick">
           <div class="home-card home-lock-card">
             <div class="home-lock-header">
-              <h3>Accesos rápidos</h3>
+              <h3>${t.quickAccessTitle || 'Accesos rapidos'}</h3>
             </div>
             <div class="module-grid">
               ${createModuleCard(t.centerTitle, t.centerDesc, 'center', false, t)}
@@ -2067,7 +2196,7 @@ document.addEventListener('click', () => {
 // Logo del header = enlace a Home en todas las vistas (Landing, Dashboard y
 // sub-páginas). Delegado en <body> para que funcione aunque el header se
 // re-renderice o la sub-página activa haya sustituido <main>.
-document.body.addEventListener('click', (event) => {
+document.addEventListener('click', (event) => {
   if (event.target.closest('#headerLogoBtn')) {
     window.homePage_goHome();
   }
@@ -2192,7 +2321,7 @@ export async function renderHomePage() {
     renderLoginState(null, t);
     const feedContainer = document.querySelector('.landing-col-feed');
     feedContainer?.addEventListener('click', handleFeedClick);
-    renderCentralFeed();
+    renderCentralFeed(language);
     initHeroCarousel();
   }
 }
