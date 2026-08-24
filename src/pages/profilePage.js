@@ -343,7 +343,7 @@ async function loadFavorites() {
           <p>${fav.item_description || 'Sin descripción'}</p>
           <small>Agregado: ${new Date(fav.created_at).toLocaleDateString('es-ES')}</small>
         </div>
-        <button class="btn-small btn-danger" onclick="removeFavorite('${fav.id}')">${getIcon('close', 14)}</button>
+        <button class="btn-small btn-danger" onclick="removeFavorite('${fav.id}', '${fav.type || 'article'}')">${getIcon('close', 14)}</button>
       </div>
     `).join('');
   } catch (error) {
@@ -557,14 +557,13 @@ function getHistoryIcon(action) {
 /**
  * Remover favorito (función global)
  */
-window.removeFavorite = async (favoriteId) => {
+window.removeFavorite = async (favoriteId, module = 'article') => {
   try {
-    await fetch(`${API_URL}/favorites?id=eq.${favoriteId}`, {
-      method: 'DELETE',
-      headers: AUTH_HEADER
-    });
-    loadFavorites();
-    console.log('✅ Favorito removido');
+    const removed = await FavoritesService.removeFavorite(module, favoriteId);
+    if (removed) {
+      loadFavorites();
+      console.log('✅ Favorito removido');
+    }
   } catch (error) {
     console.error('❌ Error removiendo favorito:', error);
   }
