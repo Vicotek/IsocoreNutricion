@@ -4,9 +4,11 @@
  * Sincroniza con Supabase en tiempo real
  */
 
+import { getAuthToken } from './authService.js';
 import {
   getFavoritesFromSupabase,
-  saveFavoriteToSupabase
+  saveFavoriteToSupabase,
+  deleteFavoriteFromSupabase
 } from './supabaseClient.js';
 
 // Cache local de favoritos del usuario actual
@@ -35,25 +37,26 @@ export async function initializeFavoritesService(email) {
  * @returns {Promise<Array>} - Array de favoritos
  */
 export async function loadFavoritesFromSupabase() {
-  if (!userEmail) {
-    console.warn('❌ Usuario no inicializado en FavoritesService');
+  const sesionToken = getAuthToken();
+
+  if (!sesionToken) {
+    console.warn('❌ No hay sesión activa en FavoritesService');
     return [];
   }
 
   try {
-    console.log('📥 Cargando favoritos desde Supabase...');
-    const favorites = await getFavoritesFromSupabase(userEmail);
-    
+    console.log('📥 Cargando favoritos desde RPC...');
+    const favorites = await getFavoritesFromSupabase(sesionToken);
+
     if (favorites && Array.isArray(favorites)) {
       favoritesCache = favorites;
       console.log(`✅ ${favorites.length} favoritos cargados al cache`);
       localStorage.setItem('isocore_favorites_cache', JSON.stringify(favorites));
     }
-    
+
     return favorites || [];
   } catch (error) {
     console.error('❌ Error cargando favoritos:', error);
-    // Intentar cargar del cache local
     const cached = localStorage.getItem('isocore_favorites_cache');
     if (cached) {
       favoritesCache = JSON.parse(cached);
@@ -103,7 +106,6 @@ export async function addFavorite(module, referenceId, name, metadata = {}) {
     // Disparar evento para actualizar UI
     dispatchFavoriteEvent('favorite-added', { module, referenceId, name });
 
-    // Intentar guardar en Supabase (no fallar si esto falla)
     const favorite = {
       type: module,
       name: name,
@@ -111,16 +113,16 @@ export async function addFavorite(module, referenceId, name, metadata = {}) {
       metadata: metadata
     };
 
-    saveFavoriteToSupabase(userEmail, favorite)
+    saveFavoriteToSupabase(getAuthToken(), favorite)
       .then(saved => {
         if (saved) {
-          console.log(`✅ Favorito sincronizado con Supabase`);
+          console.log('✅ Favorito sincronizado con RPC');
         } else {
-          console.warn('⚠️ Favorito guardado localmente pero no en Supabase');
+          console.warn('⚠️ Favorito guardado localmente pero no en RPC');
         }
       })
       .catch(error => {
-        console.warn('⚠️ Error sincronizando con Supabase:', error);
+        console.warn('⚠️ Error sincronizando con RPC:', error);
       });
       
     return true;
@@ -160,18 +162,17 @@ export async function removeFavorite(module, referenceId) {
       // Disparar evento para actualizar UI
       dispatchFavoriteEvent('favorite-removed', { module, referenceId });
       
-      // Intentar eliminar de Supabase (no fallar si esto falla)
       if (removed.id) {
-        deleteFavoriteFromSupabase(removed.id)
+        deleteFavoriteFromSupabase(getAuthToken(), removed.id)
           .then(deleted => {
             if (deleted) {
-              console.log(`✅ Favorito eliminado de Supabase`);
+              console.log('✅ Favorito eliminado desde RPC');
             } else {
-              console.warn('⚠️ Favorito eliminado localmente pero no en Supabase');
+              console.warn('⚠️ Favorito eliminado localmente pero no en RPC');
             }
           })
           .catch(error => {
-            console.warn('⚠️ Error sincronizando eliminación con Supabase:', error);
+            console.warn('⚠️ Error sincronizando eliminación con RPC:', error);
           });
       }
       
@@ -222,42 +223,6 @@ export function clearFavorites() {
   favoritesCache = [];
   localStorage.removeItem('isocore_favorites_cache');
   console.log('🗑️ Favoritos limpios');
-}
-
-/**
- * Eliminar favorito de Supabase (función auxiliar)
- * @param {number} favoriteId - ID del favorito a eliminar
- * @returns {Promise<boolean>}
- */
-async function deleteFavoriteFromSupabase(favoriteId) {
-  if (!favoriteId) return false;
-
-  try {
-    const SUPABASE_URL = 'https://dhvouecsvhcxxzputvvq.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_jJNhVo8W8T9ejNLHrFeR5w_NP78ZPt-';
-    
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/favorites?id=eq.${favoriteId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (response.ok) {
-      console.log(`✅ Favorito eliminado de Supabase`);
-      return true;
-    }
-
-    console.warn(`⚠️ Error eliminando de Supabase (${response.status})`);
-    return false;
-  } catch (error) {
-    console.error('❌ Error eliminando favorito:', error);
-    return false;
-  }
 }
 
 /**

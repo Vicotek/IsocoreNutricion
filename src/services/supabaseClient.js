@@ -1,4 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/supabaseConfig.js';
+import { getAuthToken } from './authService.js';
 
 // Supabase Configuration - Ahora con credenciales reales
 export const API_URL = `${SUPABASE_URL}/rest/v1`;
@@ -6,6 +7,37 @@ export const AUTH_HEADER = {
   'apikey': SUPABASE_ANON_KEY,
   'Content-Type': 'application/json'
 };
+
+async function callRpc(functionName, params = {}) {
+  const token = getAuthToken();
+
+  if (!token) {
+    console.warn(`⚠️ Supabase RPC sin sesión activa para ${functionName}`);
+    return { data: null, error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/rpc/${functionName}`, {
+      method: 'POST',
+      headers: {
+        ...AUTH_HEADER,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ ...params, p_sesion_token: params.p_sesion_token ?? token })
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return { data: null, error: { code: response.status, message: result?.message || response.statusText } };
+    }
+
+    return { data: result, error: null };
+  } catch (error) {
+    console.error(`❌ Error ejecutando RPC ${functionName}:`, error);
+    return { data: null, error: { code: 'unknown', message: error.message } };
+  }
+}
 
 let supabaseClient = null;
 
@@ -195,64 +227,62 @@ export function subscribeToUserPlan(email, callback) {
  * @param {number} limit - Número de registros a obtener
  * @returns {Promise<Array|null>} - Array de actividad reciente
  */
-export async function getRecentActivityFromSupabase(email, limit = 10) {
-  if (!email) return null;
+export async function getUserActivityFromSupabase(sesionToken = getAuthToken(), limit = 10) {
+  if (!sesionToken) return [];
 
   try {
-    console.log(`📊 Obteniendo actividad reciente para: ${email}`);
-    
-    const response = await fetch(
-      `${API_URL}/user_activity?email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
+    const { data, error } = await callRpc('app_get_user_activity', {
+      p_sesion_token: sesionToken,
+      p_limit: limit
+    });
 
-    if (!response.ok) {
-      console.warn(`⚠️ Error obteniendo actividad (${response.status})`);
-      return null;
+    if (error) {
+      console.warn('⚠️ Error obteniendo actividad desde RPC:', error);
+      return [];
     }
 
-    const data = await response.json();
-    console.log(`✅ ${data?.length || 0} registros de actividad obtenidos`);
-    return data || [];
+    const activity = Array.isArray(data) ? data : [];
+    console.log(`✅ ${activity.length} registros de actividad obtenidos desde RPC`);
+    return activity;
   } catch (error) {
-    console.error('Error obteniendo actividad reciente:', error);
-    return null;
+    console.error('❌ Error obteniendo actividad reciente:', error);
+    return [];
   }
+}
+
+export async function getRecentActivityFromSupabase(email, limit = 10) {
+  const sesionToken = getAuthToken();
+
+  if (!sesionToken) {
+    console.warn('⚠️ No hay sesión activa para actividad reciente');
+    return [];
+  }
+
+  return getUserActivityFromSupabase(sesionToken, limit);
 }
 
 /**
  * Obtener favoritos/recursos guardados del usuario
- * @param {string} email - Email del usuario
+ * @param {string} sesionToken - Token de sesión del usuario
  * @returns {Promise<Array|null>} - Array de favoritos
  */
-export async function getFavoritesFromSupabase(email) {
-  if (!email) return null;
+export async function getFavoritesFromSupabase(sesionToken = getAuthToken()) {
+  if (!sesionToken) return [];
 
   try {
-    console.log(`💾 Obteniendo favoritos para: ${email}`);
-    
-    const response = await fetch(
-      `${API_URL}/favorites?email=eq.${encodeURIComponent(email)}&order=created_at.desc`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
+    const { data, error } = await callRpc('app_get_favorites', { p_sesion_token: sesionToken });
 
-    if (!response.ok) {
-      console.warn(`⚠️ Error obteniendo favoritos (${response.status})`);
-      return null;
+    if (error) {
+      console.warn('⚠️ Error obteniendo favoritos desde RPC:', error);
+      return [];
     }
 
-    const data = await response.json();
-    console.log(`✅ ${data?.length || 0} favoritos obtenidos`);
-    return data || [];
+    const favorites = Array.isArray(data) ? data : [];
+    console.log(`✅ ${favorites.length} favoritos obtenidos desde RPC`);
+    return favorites;
   } catch (error) {
     console.error('Error obteniendo favoritos:', error);
-    return null;
+    return [];
   }
 }
 
@@ -263,83 +293,89 @@ export async function getFavoritesFromSupabase(email) {
  * @returns {Promise<boolean>} - true si se guardó correctamente
  */
 export async function saveActivityToSupabase(email, activity) {
-  if (!email || !activity) return false;
+  const sesionToken = getAuthToken();
+  if (!sesionToken || !activity) return false;
 
   try {
-    console.log(`📝 Guardando actividad:`, activity.type);
-    
-    const activityData = {
-      email: email,
-      type: activity.type,
-      resource_name: activity.resourceName || activity.name || 'sin nombre',
-      resource_id: activity.resourceId || null,
-      action: activity.action || 'view',
-      metadata: activity.metadata || {},
-      created_at: new Date().toISOString()
-    };
+    console.log(`📝 Guardando actividad vía RPC:`, activity.type);
 
-    const response = await fetch(
-      `${API_URL}/user_activity`,
-      {
-        method: 'POST',
-        headers: AUTH_HEADER,
-        body: JSON.stringify(activityData)
-      }
-    );
+    const { data, error } = await callRpc('app_log_user_activity', {
+      p_sesion_token: sesionToken,
+      p_type: activity.type || 'view',
+      p_resource_name: activity.resourceName || activity.name || 'sin nombre',
+      p_resource_id: activity.resourceId || null,
+      p_action: activity.action || 'view',
+      p_metadata: activity.metadata || {}
+    });
 
-    if (!response.ok) {
-      console.error(`❌ Error guardando actividad (${response.status})`);
+    if (error) {
+      console.error('❌ Error guardando actividad desde RPC:', error);
       return false;
     }
 
-    console.log(`✅ Actividad guardada`);
-    return true;
+    console.log('✅ Actividad guardada desde RPC');
+    return !!data;
   } catch (error) {
-    console.error('Error guardando actividad:', error);
+    console.error('❌ Error guardando actividad:', error);
     return false;
   }
 }
 
 /**
- * Guardar favorito
- * @param {string} email - Email del usuario
+ * Guardar favorito con RPC
+ * @param {string} sesionToken - Token de sesión del usuario
  * @param {Object} favorite - Datos del favorito
  * @returns {Promise<boolean>} - true si se guardó correctamente
  */
-export async function saveFavoriteToSupabase(email, favorite) {
-  if (!email || !favorite) return false;
+export async function saveFavoriteToSupabase(sesionToken = getAuthToken(), favorite) {
+  if (!sesionToken || !favorite) return false;
 
   try {
-    console.log(`💾 Guardando favorito:`, favorite.type);
-    
-    const favoriteData = {
-      email: email,
-      type: favorite.type, // 'recipe', 'resource', 'supplement'
-      name: favorite.name || 'sin nombre',
-      resource_id: favorite.resourceId || null,
-      url: favorite.url || null,
-      metadata: favorite.metadata || {},
-      created_at: new Date().toISOString()
-    };
+    const { data, error } = await callRpc('app_add_favorite', {
+      p_sesion_token: sesionToken,
+      p_type: favorite.type,
+      p_name: favorite.name || 'sin nombre',
+      p_resource_id: favorite.resourceId || null,
+      p_url: favorite.url || null,
+      p_metadata: favorite.metadata || {}
+    });
 
-    const response = await fetch(
-      `${API_URL}/favorites`,
-      {
-        method: 'POST',
-        headers: AUTH_HEADER,
-        body: JSON.stringify(favoriteData)
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`❌ Error guardando favorito (${response.status})`);
+    if (error) {
+      console.error('❌ Error guardando favorito desde RPC:', error);
       return false;
     }
 
-    console.log(`✅ Favorito guardado`);
-    return true;
+    console.log('✅ Favorito guardado desde RPC');
+    return !!data;
   } catch (error) {
     console.error('Error guardando favorito:', error);
+    return false;
+  }
+}
+
+/**
+ * Eliminar favorito con RPC
+ * @param {string} sesionToken - Token de sesión del usuario
+ * @param {number} favoriteId - ID del favorito
+ * @returns {Promise<boolean>}
+ */
+export async function deleteFavoriteFromSupabase(sesionToken = getAuthToken(), favoriteId) {
+  if (!sesionToken || !favoriteId) return false;
+
+  try {
+    const { data, error } = await callRpc('app_delete_favorite', {
+      p_sesion_token: sesionToken,
+      p_favorite_id: favoriteId
+    });
+
+    if (error) {
+      console.error('❌ Error eliminando favorito desde RPC:', error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('❌ Error eliminando favorito:', error);
     return false;
   }
 }
@@ -767,26 +803,27 @@ export async function getEducationalModuleFromSupabase(moduleId) {
  * Obtener todos los planes nutricionales
  * @returns {Promise<Array>} - Array de planes
  */
-export async function getNutritionalPlansFromSupabase() {
-  try {
-    console.log('📋 Obteniendo planes nutricionales desde Supabase...');
-    
-    const response = await fetch(
-      `${API_URL}/planes_nutricionales?order=created_at.desc&select=*`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
+export async function getNutritionalPlansFromSupabase(sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    console.warn('⚠️ No hay sesión activa para planes nutricionales');
+    return [];
+  }
 
-    if (!response.ok) {
-      console.error(`❌ Error obteniendo planes nutricionales`);
+  try {
+    console.log('📋 Obteniendo planes nutricionales desde RPC...');
+
+    const { data, error } = await callRpc('app_get_mis_planes', {
+      p_sesion_token: sesionToken
+    });
+
+    if (error) {
+      console.warn('⚠️ Error obteniendo planes nutricionales desde RPC:', error);
       return [];
     }
 
-    const data = await response.json();
-    console.log(`✅ ${data.length || 0} planes obtenidos`);
-    return Array.isArray(data) ? data : [];
+    const plans = Array.isArray(data) ? data : [];
+    console.log(`✅ ${plans.length} planes obtenidos desde RPC`);
+    return plans;
   } catch (error) {
     console.error('❌ Error obteniendo planes nutricionales:', error);
     return [];
@@ -798,23 +835,12 @@ export async function getNutritionalPlansFromSupabase() {
  * @param {string} planId - ID del plan
  * @returns {Promise<Object|null>} - Objeto del plan o null
  */
-export async function getNutritionalPlanFromSupabase(planId) {
+export async function getNutritionalPlanFromSupabase(planId, sesionToken = getAuthToken()) {
+  if (!planId) return null;
+
   try {
-    const response = await fetch(
-      `${API_URL}/planes_nutricionales?id=eq.${planId}&select=*`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`❌ Error obteniendo plan ${planId}`);
-      return null;
-    }
-
-    const data = await response.json();
-    return data && data.length > 0 ? data[0] : null;
+    const plans = await getNutritionalPlansFromSupabase(sesionToken);
+    return plans.find((plan) => String(plan.id) === String(planId)) || null;
   } catch (error) {
     console.error('❌ Error obteniendo plan:', error);
     return null;

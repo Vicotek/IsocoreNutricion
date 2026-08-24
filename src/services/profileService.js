@@ -3,11 +3,46 @@
  * Centraliza datos personales, objetivos, plan, favoritos, historial, notificaciones
  */
 
-import { API_URL, AUTH_HEADER } from './supabaseClient.js';
+import { API_URL, AUTH_HEADER, getFavoritesFromSupabase, getUserActivityFromSupabase } from './supabaseClient.js';
+import { getAuthToken } from './authService.js';
 
 // Estado del perfil
 let currentProfile = null;
 let currentUserEmail = null;
+
+async function callProfileRpc(functionName, params = {}) {
+  const token = getAuthToken();
+
+  if (!token) {
+    return { data: null, error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  // Patrón de actualización silenciosa: el RPC se ejecuta con la anon key del
+  // cliente pero el token real de sesión va en el cuerpo como p_sesion_token.
+  // Esto permite que la SQL function valide la sesión sin exigir un token
+  // de autenticación de usuario en cada request de escritura.
+  try {
+    const response = await fetch(`${API_URL}/rpc/${functionName}`, {
+      method: 'POST',
+      headers: {
+        ...AUTH_HEADER,
+        'Authorization': `Bearer ${AUTH_HEADER.apikey}`
+      },
+      body: JSON.stringify({ p_sesion_token: token, ...params })
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return { data: null, error: { code: response.status, message: result?.message || response.statusText } };
+    }
+
+    return { data: result, error: null };
+  } catch (error) {
+    console.error(`❌ Error ejecutando RPC ${functionName}:`, error);
+    return { data: null, error: { code: 'unknown', message: error.message } };
+  }
+}
 
 function normalizeProfileRow(row) {
   if (!row) return null;
@@ -49,31 +84,25 @@ export function initializeProfileService(userEmail) {
  */
 async function loadUserProfile() {
   try {
-    console.log('📥 Cargando perfil del usuario...');
-    
-    const response = await fetch(
-      `${API_URL}/usuarios_publicas?email=eq.${encodeURIComponent(currentUserEmail)}&select=*`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
+    console.log('📥 Cargando perfil del usuario desde RPC...');
 
-    if (!response.ok) {
-      console.warn('⚠️ Perfil no encontrado, creando nuevo...');
+    const { data, error } = await callProfileRpc('app_get_mi_perfil');
+
+    if (error) {
+      console.warn('⚠️ Error cargando perfil desde RPC:', error);
       return createDefaultProfile();
     }
 
-    const profiles = await response.json();
-    
-    if (profiles.length > 0) {
-      currentProfile = normalizeProfileRow(profiles[0]);
+    const profileData = Array.isArray(data) ? data[0] : data;
+
+    if (profileData) {
+      currentProfile = normalizeProfileRow(profileData);
       console.log('✅ Perfil cargado:', currentProfile);
       cacheProfile();
       return currentProfile;
-    } else {
-      return createDefaultProfile();
     }
+
+    return createDefaultProfile();
   } catch (error) {
     console.error('❌ Error cargando perfil:', error);
     loadProfileFromCache();
@@ -156,33 +185,35 @@ export function getProfile() {
  * @returns {Promise<Object>} - Perfil actualizado
  */
 export async function updateProfile(updates) {
-  if (!currentUserEmail) {
-    console.error('❌ Perfil no inicializado');
+  const sesionToken = getAuthToken();
+
+  if (!sesionToken) {
+    console.error('❌ Perfil no inicializado: no hay sesión activa');
     return null;
   }
 
   try {
-    console.log('📝 Actualizando perfil...');
-    
-    const profileUpdate = {
-      ...updates,
-      updated_at: new Date().toISOString()
+    console.log('📝 Actualizando perfil via RPC...');
+
+    const payload = {
+      p_sesion_token: sesionToken,
+      p_nombre: updates?.nombre ?? updates?.full_name ?? null,
+      p_idioma: updates?.idioma ?? updates?.language ?? null,
+      p_bio: updates?.bio ?? null,
+      p_avatar_url: updates?.avatar_url ?? null,
+      p_notifications_enabled: updates?.notifications_enabled ?? null,
+      p_nutritional_goal: updates?.nutritional_goal ?? null
     };
 
-    const response = await fetch(
-      `${API_URL}/usuarios?email=eq.${encodeURIComponent(currentUserEmail)}`,
-      {
-        method: 'PATCH',
-        headers: AUTH_HEADER,
-        body: JSON.stringify(profileUpdate)
-      }
-    );
+    const { data, error } = await callProfileRpc('app_actualizar_mi_perfil', payload);
 
-    if (!response.ok) {
-      throw new Error('Error actualizando perfil');
+    if (error) {
+      console.error('❌ Error actualizando perfil desde RPC:', error);
+      return null;
     }
 
-    currentProfile = normalizeProfileRow({ ...currentProfile, ...profileUpdate });
+    const profileData = Array.isArray(data) ? data[0] : data;
+    currentProfile = normalizeProfileRow(profileData || { ...currentProfile, ...updates });
     cacheProfile();
     console.log('✅ Perfil actualizado:', currentProfile);
     return currentProfile;
@@ -245,22 +276,10 @@ export async function updateLanguage(language) {
  */
 export async function getFavorites() {
   try {
-    console.log('❤️ Obteniendo favoritos...');
-    
-    const response = await fetch(
-      `${API_URL}/favorites?email=eq.${encodeURIComponent(currentUserEmail)}`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Error obteniendo favoritos');
-    }
-
-    const favorites = await response.json();
-    console.log(`✅ ${favorites.length} favoritos obtenidos`);
+    console.log('❤️ Obteniendo favoritos desde RPC...');
+    const sesionToken = getAuthToken();
+    const favorites = await getFavoritesFromSupabase(sesionToken);
+    console.log(`✅ ${favorites.length} favoritos obtenidos desde RPC`);
     return favorites;
   } catch (error) {
     console.error('❌ Error obteniendo favoritos:', error);
@@ -275,22 +294,10 @@ export async function getFavorites() {
  */
 export async function getHistory(limit = 20) {
   try {
-    console.log('📜 Obteniendo historial...');
-    
-    const response = await fetch(
-      `${API_URL}/user_activity?email=eq.${encodeURIComponent(currentUserEmail)}&order=created_at.desc&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Error obteniendo historial');
-    }
-
-    const history = await response.json();
-    console.log(`✅ ${history.length} registros de historial obtenidos`);
+    console.log('📜 Obteniendo historial desde RPC...');
+    const sesionToken = getAuthToken();
+    const history = await getUserActivityFromSupabase(sesionToken, limit);
+    console.log(`✅ ${history.length} registros de historial obtenidos desde RPC`);
     return history;
   } catch (error) {
     console.error('❌ Error obteniendo historial:', error);
