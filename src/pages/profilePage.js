@@ -339,7 +339,7 @@ async function loadFavorites() {
       <div class="favorite-item">
         <div class="favorite-icon">${fav.type === 'articles' ? getIcon('book', 20) : getIcon('storefront', 20)}</div>
         <div class="favorite-info">
-          <h4>${fav.item_title}</h4>
+          <h4>${fav.name}</h4>
           <p>${fav.item_description || 'Sin descripción'}</p>
           <small>Agregado: ${new Date(fav.created_at).toLocaleDateString('es-ES')}</small>
         </div>
