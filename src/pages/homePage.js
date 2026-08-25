@@ -1,5 +1,5 @@
 ﻿import { getIcon } from '../components/icons.js';
-import { setAuthToken } from '../services/authService.js';
+import { setAuthToken, clearAuthToken } from '../services/authService.js';
 import { updateUIByPlan, savePlan, clearPlan, loadUserPlan, getCurrentPlan } from '../services/planService.js';
 import {
   getUserPlanFromSupabase,
@@ -1021,6 +1021,7 @@ function storeUser(user) {
 function clearStoredUser() {
   window.localStorage.removeItem(STORAGE_KEY);
   window.localStorage.removeItem(LEGACY_USER_KEY);
+  clearAuthToken();
   window.localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
@@ -1701,10 +1702,10 @@ function initHomeInteractions(t) {
         // Guardar token si existe
         if (data.token) {
           setAuthToken(data.token);
-          localStorage.setItem(LEGACY_TOKEN_KEY, data.token);
         } else if (data.access_token) {
           setAuthToken(data.access_token);
-          localStorage.setItem(LEGACY_TOKEN_KEY, data.access_token);
+        } else if (data.sesion_token) {
+          setAuthToken(data.sesion_token);
         }
 
         // Extraer datos del usuario de diferentes formatos posibles
