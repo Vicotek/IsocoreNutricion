@@ -457,9 +457,13 @@ function setupEventListeners() {
       avatar_url: document.getElementById('avatarUrl').value
     };
 
-    await ProfileService.updateProfile(updates);
-    alert('Perfil actualizado');
-    loadProfileData();
+    const result = await ProfileService.updateProfile(updates);
+    if (result) {
+      alert('Perfil actualizado');
+      loadProfileData();
+    } else {
+      alert('Error al guardar el perfil. Revisa la consola.');
+    }
   });
 
   // Seleccionar objetivo
@@ -467,25 +471,39 @@ function setupEventListeners() {
     card.addEventListener('click', async (e) => {
       document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
-      
+
       const goal = card.dataset.goal;
-      await ProfileService.updateNutritionalGoal(goal);
-      console.log('🎯 Objetivo actualizado:', goal);
+      const result = await ProfileService.updateNutritionalGoal(goal);
+      if (result && result.saved === false) {
+        alert('La selección de objetivo se muestra temporalmente como no persistida: la integración con planes nutricionales está pendiente.');
+      } else if (!result) {
+        alert('Objetivo no válido.');
+      } else {
+        console.log('🎯 Objetivo actualizado:', goal);
+      }
     });
   });
 
   // Cambiar idioma
   document.querySelectorAll('.language-radio').forEach(radio => {
     radio.addEventListener('change', async (e) => {
-      await ProfileService.updateLanguage(e.target.value);
-      console.log('🌍 Idioma actualizado:', e.target.value);
+      const result = await ProfileService.updateLanguage(e.target.value);
+      if (!result) {
+        alert('Error al guardar el idioma. Revisa la consola.');
+      } else {
+        console.log('🌍 Idioma actualizado:', e.target.value);
+      }
     });
   });
 
   // Toggle notificaciones
   document.getElementById('notificationsToggle').addEventListener('change', async (e) => {
-    await ProfileService.updateNotificationSettings(e.target.checked);
-    console.log('🔔 Notificaciones:', e.target.checked ? 'activadas' : 'desactivadas');
+    const result = await ProfileService.updateNotificationSettings(e.target.checked);
+    if (!result) {
+      alert('Error al guardar la configuración de notificaciones. Revisa la consola.');
+    } else {
+      console.log('🔔 Notificaciones:', e.target.checked ? 'activadas' : 'desactivadas');
+    }
   });
 
   // Cambiar contraseña

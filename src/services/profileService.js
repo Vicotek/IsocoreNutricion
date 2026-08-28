@@ -55,7 +55,7 @@ function normalizeProfileRow(row) {
     bio: row.bio || '',
     nutritional_goal: row.nutritional_goal || row.objective || 'general',
     active_plan: row.active_plan || row.plan || 'free',
-    language: row.language || 'es',
+    language: row.language || row.idioma || 'es',
     notifications_enabled: row.notifications_enabled ?? true,
     created_at: row.created_at || null,
     updated_at: row.updated_at || null
@@ -201,8 +201,7 @@ export async function updateProfile(updates) {
       p_idioma: updates?.idioma ?? updates?.language ?? null,
       p_bio: updates?.bio ?? null,
       p_avatar_url: updates?.avatar_url ?? null,
-      p_notifications_enabled: updates?.notifications_enabled ?? null,
-      p_nutritional_goal: updates?.nutritional_goal ?? null
+      p_notifications_enabled: updates?.notifications_enabled ?? null
     };
 
     const { data, error } = await callProfileRpc('app_actualizar_mi_perfil', payload);
@@ -364,13 +363,19 @@ export async function markNotificationAsRead(notificationId) {
  */
 export async function updateNutritionalGoal(goal) {
   const validGoals = ['general', 'weight_loss', 'muscle_gain', 'performance'];
-  
+
   if (!validGoals.includes(goal)) {
     console.warn('⚠️ Objetivo no válido:', goal);
     return null;
   }
 
-  return await updateProfile({ nutritional_goal: goal });
+  // El objetivo nutricional real pertenece a un plan nutricional/plan de usuario,
+  // no al perfil de la tabla usuarios. La ruta de persistencia con
+  // app_crear_plan_nutricional/app_actualizar_plan_nutricional no está
+  // implementada en este frontend todavía, así que evitamos una llamada que
+  // falle silenciamente y dejamos el estado explícitamente no persistido.
+  console.warn('⚠️ Objetivo nutricional no persistido: la integración con los planes de usuario aún no está disponible.');
+  return { goal, saved: false, message: 'Objetivo sin persistencia real: pendiente de integración con planes nutricionales.' };
 }
 
 /**
