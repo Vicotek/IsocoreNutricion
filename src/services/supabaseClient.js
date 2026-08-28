@@ -288,11 +288,10 @@ export async function getFavoritesFromSupabase(sesionToken = getAuthToken()) {
 
 /**
  * Guardar nueva actividad del usuario
- * @param {string} email - Email del usuario
  * @param {Object} activity - Datos de actividad
  * @returns {Promise<boolean>} - true si se guardó correctamente
  */
-export async function saveActivityToSupabase(email, activity) {
+export async function saveActivityToSupabase(activity) {
   const sesionToken = getAuthToken();
   if (!sesionToken || !activity) return false;
 

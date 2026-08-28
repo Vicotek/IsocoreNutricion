@@ -8,6 +8,7 @@ import {
   getRecentActivityFromSupabase,
   getFavoritesFromSupabase
 } from './supabaseClient.js';
+import { getAuthToken } from './authService.js';
 import { getIcon } from '../components/icons.js';
 
 const DASHBOARD_CACHE_KEY = 'isocore_dashboard_cache';
@@ -38,9 +39,11 @@ export async function loadDashboard(email) {
 
     // Obtener actividad reciente
     const recentActivity = await getRecentActivityFromSupabase(email);
-    
-    // Obtener favoritos/recursos guardados
-    const favorites = await getFavoritesFromSupabase(email);
+
+    // Obtener favoritos/recursos guardados usando el token real de sesión.
+    // app_get_favorites acepta p_sesion_token uuid, no un email.
+    const sesionToken = getAuthToken();
+    const favorites = sesionToken ? await getFavoritesFromSupabase(sesionToken) : [];
 
     // Construir objeto de dashboard
     const dashboard = {
@@ -99,7 +102,7 @@ export async function updateRecentActivity(email, activity) {
     console.log('📝 Registrando actividad:', activity.type);
 
     // Registrar en Supabase (implementar en supabaseClient)
-    // TODO: Crear función saveActivityToSupabase()
+    // TODO: Crear función saveActivityToSupabase(activity)
 
     // Refrescar dashboard local
     const dashboard = await loadDashboard(email);
