@@ -2,6 +2,16 @@ import { getUserPlanFromSupabase, subscribeToUserPlan } from './supabaseClient.j
 
 const PLAN_STORAGE_KEY = 'isocore_plan';
 
+export function normalizePlan(plan) {
+  if (plan === null || plan === undefined || plan === '') {
+    return 'free';
+  }
+
+  const normalized = String(plan).trim().toLowerCase();
+  if (normalized === 'gratis') return 'free';
+  return normalized || 'free';
+}
+
 // Configuración de acceso a módulos por plan
 export const MODULE_ACCESS = {
   free: [

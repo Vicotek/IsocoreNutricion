@@ -10,6 +10,7 @@ import {
 } from './supabaseClient.js';
 import { getAuthToken } from './authService.js';
 import { getIcon } from '../components/icons.js';
+import { normalizePlan } from './planService.js';
 
 const DASHBOARD_CACHE_KEY = 'isocore_dashboard_cache';
 const ACTIVITY_UPDATE_INTERVAL = 30000; // Actualizar cada 30 segundos
@@ -46,11 +47,16 @@ export async function loadDashboard(email) {
     const favorites = sesionToken ? await getFavoritesFromSupabase(sesionToken) : [];
 
     // Construir objeto de dashboard
+    // Mantener el plan de la UI del dashboard en español por diseño: los badges y textos del panel usan 'gratis'/'premium'/'vip'
+    // mientras que el valor canónico para acceso/control es 'free'/'premium'/'vip'.
+    const normalizedPlan = normalizePlan(user.plan);
+    const dashboardPlan = normalizedPlan === 'free' ? 'gratis' : (normalizedPlan || 'gratis');
+
     const dashboard = {
       user: {
         name: user.nombre || user.name || 'Usuario',
         email: user.email,
-        plan: user.plan || 'gratis',
+        plan: dashboardPlan,
         lastLogin: user.last_login || new Date().toISOString(),
         avatarUrl: user.avatar_url || null
       },

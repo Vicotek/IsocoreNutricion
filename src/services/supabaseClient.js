@@ -1,5 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/supabaseConfig.js';
 import { getAuthToken } from './authService.js';
+import { normalizePlan } from './planService.js';
 
 // Supabase Configuration - Ahora con credenciales reales
 export const API_URL = `${SUPABASE_URL}/rest/v1`;
@@ -70,11 +71,8 @@ export async function getUserPlanFromSupabase(email) {
     const data = await response.json();
     
     if (data && data.length > 0) {
-      let plan = data[0].plan;
-      
-      // Mapear valores de Supabase a valores internos
-      if (plan === 'gratis') plan = 'free';
-      
+      const plan = normalizePlan(data[0].plan);
+
       console.log(`✅ Plan obtenido desde Supabase: ${plan}`);
       return plan;
     }

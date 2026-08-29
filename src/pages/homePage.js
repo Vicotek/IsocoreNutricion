@@ -1,6 +1,6 @@
 ﻿import { getIcon } from '../components/icons.js';
 import { setAuthToken, clearAuthToken } from '../services/authService.js';
-import { updateUIByPlan, savePlan, clearPlan, loadUserPlan, getCurrentPlan } from '../services/planService.js';
+import { updateUIByPlan, savePlan, clearPlan, loadUserPlan, getCurrentPlan, normalizePlan } from '../services/planService.js';
 import {
   getUserPlanFromSupabase,
   getFeaturedArticlesFromSupabase,
@@ -1712,7 +1712,7 @@ function initHomeInteractions(t) {
         const user = {
           name: data.nombre || data.name || data.user?.name || email.split('@')[0],
           email: data.email || email,
-          plan: data.plan || data.user?.plan || 'free',
+          plan: normalizePlan(data.plan || data.user?.plan || 'free'),
           loggedAt: new Date().toISOString()
         };
 
