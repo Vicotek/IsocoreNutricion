@@ -44,6 +44,13 @@ async function callProfileRpc(functionName, params = {}) {
   }
 }
 
+function normalizePlanValue(plan) {
+  if (!plan) return 'free';
+
+  const normalized = String(plan).toLowerCase();
+  return normalized === 'gratis' ? 'free' : normalized;
+}
+
 function normalizeProfileRow(row) {
   if (!row) return null;
 
@@ -54,7 +61,7 @@ function normalizeProfileRow(row) {
     avatar_url: row.avatar_url || '',
     bio: row.bio || '',
     nutritional_goal: row.nutritional_goal || row.objective || 'general',
-    active_plan: row.active_plan || row.plan || 'free',
+    active_plan: normalizePlanValue(row.active_plan || row.plan || 'free'),
     language: row.language || row.idioma || 'es',
     notifications_enabled: row.notifications_enabled ?? true,
     created_at: row.created_at || null,

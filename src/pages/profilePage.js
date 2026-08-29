@@ -309,8 +309,10 @@ function displayPlanInfo(profile) {
     'vip': { icon: getIcon('crown', 28), name: 'Plan VIP', color: '#FF6B6B' }
   };
 
-  const plan = planInfo[profile.active_plan || 'free'];
-  
+  const rawPlan = (profile?.active_plan || profile?.plan || 'free').toLowerCase();
+  const normalizedPlan = rawPlan === 'gratis' ? 'free' : rawPlan;
+  const plan = planInfo[normalizedPlan] || planInfo['free'];
+
   planDisplay.innerHTML = `
     <div class="plan-card" style="border-color: ${plan.color}">
       <div class="plan-icon">${plan.icon}</div>
