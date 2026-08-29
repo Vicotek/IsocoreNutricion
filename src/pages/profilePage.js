@@ -314,6 +314,7 @@ async function renderPersonalPlanBuilder() {
   const restrictionOptions = NutritionalPlansService.getRestrictionOptions();
 
   const selectedRestrictions = plan?.restricciones || [];
+  const isEditMode = Boolean(plan && plan.id);
 
   const objectiveMarkup = objectiveOptions.map((option) => `
     <option value="${option.value}" ${plan && plan.objetivo === option.value ? 'selected' : ''}>${option.label}</option>
@@ -402,7 +403,7 @@ async function renderPersonalPlanBuilder() {
         </div>
         <div class="form-group">
           <label>Profesional</label>
-          <input type="text" id="planProfesional" class="form-input" value="${plan?.profesional || ''}" placeholder="Ej. IsoCore" />
+          <input type="text" id="planProfesional" class="form-input" value="${plan?.profesional || 'IsoCore'}" placeholder="Ej. IsoCore" ${isEditMode ? 'readonly' : ''} />
         </div>
       </div>
 

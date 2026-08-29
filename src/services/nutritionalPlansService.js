@@ -211,22 +211,23 @@ export async function updateNutritionalPlan(planId, updates = {}) {
     return { ok: false, error: { code: '400', message: 'Falta planId' } };
   }
 
+  const { profesional, ...updatableFields } = updates;
+
   const payload = {
     p_plan_id: planId,
-    ...(updates.objetivo ? { p_objetivo: updates.objetivo } : {}),
-    ...(updates.edad !== undefined && updates.edad !== null ? { p_edad: Number(updates.edad) } : {}),
-    ...(updates.peso_kg !== undefined && updates.peso_kg !== null ? { p_peso_kg: Number(updates.peso_kg) } : {}),
-    ...(updates.altura_cm !== undefined && updates.altura_cm !== null ? { p_altura_cm: Number(updates.altura_cm) } : {}),
-    ...(updates.actividad ? { p_actividad: updates.actividad } : {}),
-    ...(updates.restricciones ? { p_restricciones: updates.restricciones } : {}),
-    ...(updates.calorias_objetivo !== undefined && updates.calorias_objetivo !== null ? { p_calorias_objetivo: Number(updates.calorias_objetivo) } : {}),
-    ...(updates.proteina_objetivo_g !== undefined && updates.proteina_objetivo_g !== null ? { p_proteina_objetivo_g: Number(updates.proteina_objetivo_g) } : {}),
-    ...(updates.carbos_objetivo_g !== undefined && updates.carbos_objetivo_g !== null ? { p_carbos_objetivo_g: Number(updates.carbos_objetivo_g) } : {}),
-    ...(updates.grasas_objetivo_g !== undefined && updates.grasas_objetivo_g !== null ? { p_grasas_objetivo_g: Number(updates.grasas_objetivo_g) } : {}),
-    ...(updates.plan_generado ? { p_plan_generado: updates.plan_generado } : {}),
-    ...(updates.condicion_principal ? { p_condicion_principal: updates.condicion_principal } : {}),
-    ...(updates.observaciones ? { p_observaciones: updates.observaciones } : {}),
-    ...(updates.profesional ? { p_profesional: updates.profesional } : {})
+    ...(updatableFields.objetivo ? { p_objetivo: updatableFields.objetivo } : {}),
+    ...(updatableFields.edad !== undefined && updatableFields.edad !== null ? { p_edad: Number(updatableFields.edad) } : {}),
+    ...(updatableFields.peso_kg !== undefined && updatableFields.peso_kg !== null ? { p_peso_kg: Number(updatableFields.peso_kg) } : {}),
+    ...(updatableFields.altura_cm !== undefined && updatableFields.altura_cm !== null ? { p_altura_cm: Number(updatableFields.altura_cm) } : {}),
+    ...(updatableFields.actividad ? { p_actividad: updatableFields.actividad } : {}),
+    ...(updatableFields.restricciones ? { p_restricciones: updatableFields.restricciones } : {}),
+    ...(updatableFields.calorias_objetivo !== undefined && updatableFields.calorias_objetivo !== null ? { p_calorias_objetivo: Number(updatableFields.calorias_objetivo) } : {}),
+    ...(updatableFields.proteina_objetivo_g !== undefined && updatableFields.proteina_objetivo_g !== null ? { p_proteina_objetivo_g: Number(updatableFields.proteina_objetivo_g) } : {}),
+    ...(updatableFields.carbos_objetivo_g !== undefined && updatableFields.carbos_objetivo_g !== null ? { p_carbos_objetivo_g: Number(updatableFields.carbos_objetivo_g) } : {}),
+    ...(updatableFields.grasas_objetivo_g !== undefined && updatableFields.grasas_objetivo_g !== null ? { p_grasas_objetivo_g: Number(updatableFields.grasas_objetivo_g) } : {}),
+    ...(updatableFields.plan_generado ? { p_plan_generado: updatableFields.plan_generado } : {}),
+    ...(updatableFields.condicion_principal ? { p_condicion_principal: updatableFields.condicion_principal } : {}),
+    ...(updatableFields.observaciones ? { p_observaciones: updatableFields.observaciones } : {})
   };
 
   const { data, error } = await callPlanRpc('app_actualizar_plan_nutricional', payload);
