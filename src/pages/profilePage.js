@@ -5,6 +5,7 @@
 
 import * as ProfileService from '../services/profileService.js';
 import * as FavoritesService from '../services/favoritesService.js';
+import * as NutritionalPlansService from '../services/nutritionalPlansService.js';
 import { API_URL, AUTH_HEADER } from '../services/supabaseClient.js';
 import { getIcon } from '../components/icons.js';
 
@@ -115,6 +116,8 @@ export function renderProfilePage() {
                 <p>Optimizar rendimiento atlético</p>
               </div>
             </div>
+
+            <div class="profile-section" id="personalPlanBuilder"></div>
           </div>
 
           <!-- Estadísticas -->
@@ -296,6 +299,183 @@ async function loadProfileData() {
 
   // Notificaciones
   document.getElementById('notificationsToggle').checked = profile.notifications_enabled !== false;
+
+  await renderPersonalPlanBuilder();
+}
+
+async function renderPersonalPlanBuilder() {
+  const container = document.getElementById('personalPlanBuilder');
+  if (!container) return;
+
+  const plans = await NutritionalPlansService.loadMyPlans();
+  const plan = plans[0] || null;
+  const objectiveOptions = NutritionalPlansService.getPlanObjectiveOptions();
+  const activityOptions = NutritionalPlansService.getActivityOptions();
+  const restrictionOptions = NutritionalPlansService.getRestrictionOptions();
+
+  const selectedRestrictions = plan?.restricciones || [];
+
+  const objectiveMarkup = objectiveOptions.map((option) => `
+    <option value="${option.value}" ${plan && plan.objetivo === option.value ? 'selected' : ''}>${option.label}</option>
+  `).join('');
+
+  const activityMarkup = activityOptions.map((option) => `
+    <option value="${option.value}" ${plan && plan.actividad === option.value ? 'selected' : ''}>${option.label}</option>
+  `).join('');
+
+  const restrictionMarkup = restrictionOptions.map((option) => `
+    <label class="checkbox-option">
+      <input type="checkbox" name="planRestriction" value="${option.value}" ${selectedRestrictions.includes(option.value) ? 'checked' : ''}>
+      <span>${option.label}</span>
+    </label>
+  `).join('');
+
+  container.innerHTML = `
+    <h2>Plan Nutricional Personalizado</h2>
+    <p class="section-description">${plan ? `Plan actual #${plan.id} · versión ${plan.version || 1}` : 'Aún no tienes un plan generado. Completa este formulario para crear tu plan personalizado.'}</p>
+
+    <form id="personalPlanForm" class="profile-form">
+      <div class="form-group">
+        <label>Objetivo</label>
+        <select id="planObjetivo" class="form-input">
+          ${objectiveMarkup}
+        </select>
+      </div>
+
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap: 16px;">
+        <div class="form-group">
+          <label>Edad</label>
+          <input type="number" id="planEdad" class="form-input" value="${plan?.edad ?? ''}" min="0" max="120" placeholder="34" />
+        </div>
+        <div class="form-group">
+          <label>Peso (kg)</label>
+          <input type="number" id="planPesoKg" class="form-input" step="0.1" value="${plan?.peso_kg ?? ''}" placeholder="68.5" />
+        </div>
+        <div class="form-group">
+          <label>Altura (cm)</label>
+          <input type="number" id="planAlturaCm" class="form-input" value="${plan?.altura_cm ?? ''}" min="0" max="260" placeholder="165" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nivel de actividad</label>
+        <select id="planActividad" class="form-input">
+          ${activityMarkup}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Restricciones alimentarias</label>
+        <div class="checkbox-group" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:8px;">
+          ${restrictionMarkup}
+        </div>
+      </div>
+
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap: 16px;">
+        <div class="form-group">
+          <label>Calorías objetivo</label>
+          <input type="number" id="planCalorias" class="form-input" value="${plan?.calorias_objetivo ?? ''}" placeholder="1800" />
+        </div>
+        <div class="form-group">
+          <label>Proteína (g)</label>
+          <input type="number" id="planProteina" class="form-input" value="${plan?.proteina_objetivo_g ?? ''}" placeholder="110" />
+        </div>
+        <div class="form-group">
+          <label>Carbos (g)</label>
+          <input type="number" id="planCarbos" class="form-input" value="${plan?.carbos_objetivo_g ?? ''}" placeholder="180" />
+        </div>
+        <div class="form-group">
+          <label>Grasas (g)</label>
+          <input type="number" id="planGrasas" class="form-input" value="${plan?.grasas_objetivo_g ?? ''}" placeholder="60" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Plan generado</label>
+        <textarea id="planGenerado" class="form-input" rows="4" placeholder="Describe el plan generado...">${plan?.plan_generado || ''}</textarea>
+      </div>
+
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap: 16px;">
+        <div class="form-group">
+          <label>Condición principal</label>
+          <input type="text" id="planCondicion" class="form-input" value="${plan?.condicion_principal || ''}" placeholder="Ej. mejora de energía" />
+        </div>
+        <div class="form-group">
+          <label>Profesional</label>
+          <input type="text" id="planProfesional" class="form-input" value="${plan?.profesional || ''}" placeholder="Ej. IsoCore" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Observaciones</label>
+        <textarea id="planObservaciones" class="form-input" rows="3" placeholder="Observaciones adicionales...">${plan?.observaciones || ''}</textarea>
+      </div>
+
+      <div class="form-actions" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+        <button type="submit" class="btn btn-primary">${plan ? 'Guardar cambios' : 'Crear plan'}</button>
+        ${plan ? '<button type="button" class="btn btn-danger" id="deletePersonalPlanBtn">Eliminar plan</button>' : ''}
+      </div>
+    </form>
+  `;
+
+  const form = document.getElementById('personalPlanForm');
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        objetivo: document.getElementById('planObjetivo').value,
+        edad: document.getElementById('planEdad').value ? Number(document.getElementById('planEdad').value) : null,
+        peso_kg: document.getElementById('planPesoKg').value ? Number(document.getElementById('planPesoKg').value) : null,
+        altura_cm: document.getElementById('planAlturaCm').value ? Number(document.getElementById('planAlturaCm').value) : null,
+        actividad: document.getElementById('planActividad').value,
+        restricciones: Array.from(document.querySelectorAll('input[name="planRestriction"]:checked')).map((checkbox) => checkbox.value),
+        calorias_objetivo: document.getElementById('planCalorias').value ? Number(document.getElementById('planCalorias').value) : null,
+        proteina_objetivo_g: document.getElementById('planProteina').value ? Number(document.getElementById('planProteina').value) : null,
+        carbos_objetivo_g: document.getElementById('planCarbos').value ? Number(document.getElementById('planCarbos').value) : null,
+        grasas_objetivo_g: document.getElementById('planGrasas').value ? Number(document.getElementById('planGrasas').value) : null,
+        plan_generado: document.getElementById('planGenerado').value || null,
+        condicion_principal: document.getElementById('planCondicion').value || null,
+        observaciones: document.getElementById('planObservaciones').value || null,
+        profesional: document.getElementById('planProfesional').value || null
+      };
+
+      const result = plan && plan.id
+        ? await NutritionalPlansService.updateNutritionalPlan(plan.id, payload)
+        : await NutritionalPlansService.createNutritionalPlan(payload);
+
+      if (!result.ok) {
+        const message = result.error?.code === '42501'
+          ? 'No tienes permisos para editar este plan o no pertenece a tu sesión actual.'
+          : 'No se pudo guardar el plan nutricional. Revisa la consola.';
+        alert(message);
+        return;
+      }
+
+      alert(plan && plan.id ? 'Plan actualizado correctamente.' : 'Plan creado correctamente.');
+      await renderPersonalPlanBuilder();
+    });
+  }
+
+  const deleteBtn = document.getElementById('deletePersonalPlanBtn');
+  if (deleteBtn && plan && plan.id) {
+    deleteBtn.addEventListener('click', async () => {
+      const confirmed = window.confirm('¿Seguro que quieres eliminar este plan?');
+      if (!confirmed) return;
+
+      const result = await NutritionalPlansService.deleteNutritionalPlan(plan.id);
+      if (!result.ok) {
+        const message = result.error?.code === '42501'
+          ? 'No puedes eliminar este plan porque no pertenece a tu sesión actual.'
+          : 'No se pudo eliminar el plan.';
+        alert(message);
+        return;
+      }
+
+      alert('Plan eliminado.');
+      await renderPersonalPlanBuilder();
+    });
+  }
 }
 
 /**
