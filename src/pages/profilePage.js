@@ -87,6 +87,37 @@ export function renderProfilePage() {
 
         <!-- TAB: Objetivos Nutricionales -->
         <div class="profile-tab-content" id="tab-objetivos">
+          <div class="profile-section">
+            <h2>Objetivo Nutricional</h2>
+            <p class="section-description">Selecciona tu objetivo principal para recibir recomendaciones personalizadas</p>
+            
+            <div class="goals-grid">
+              <div class="goal-card" data-goal="mantenimiento">
+                <div class="goal-icon">${getIcon('scale', 26)}</div>
+                <h3>Bienestar General</h3>
+                <p>Mantener una buena salud y energía</p>
+              </div>
+
+              <div class="goal-card" data-goal="perder_peso">
+                <div class="goal-icon">${getIcon('trendDown', 26)}</div>
+                <h3>Pérdida de Peso</h3>
+                <p>Reducir peso de forma saludable</p>
+              </div>
+
+              <div class="goal-card" data-goal="ganar_musculo">
+                <div class="goal-icon">${getIcon('muscle', 26)}</div>
+                <h3>Ganancia Muscular</h3>
+                <p>Aumentar masa muscular</p>
+              </div>
+
+              <div class="goal-card" data-goal="definicion">
+                <div class="goal-icon">${getIcon('flash', 26)}</div>
+                <h3>Definición</h3>
+                <p>Perder grasa manteniendo masa muscular</p>
+              </div>
+            </div>
+          </div>
+
           <div class="profile-section" id="personalPlanBuilder"></div>
 
           <!-- Estadísticas -->
@@ -265,6 +296,18 @@ async function loadProfileData() {
   await renderPersonalPlanBuilder();
 }
 
+function syncGoalCardSelection(selectedValue) {
+  document.querySelectorAll('.goal-card').forEach((card) => {
+    const isActive = card.dataset.goal === selectedValue;
+    card.classList.toggle('active', isActive);
+  });
+
+  const objectiveSelect = document.getElementById('planObjetivo');
+  if (objectiveSelect && selectedValue) {
+    objectiveSelect.value = selectedValue;
+  }
+}
+
 async function renderPersonalPlanBuilder() {
   const container = document.getElementById('personalPlanBuilder');
   if (!container) return;
@@ -380,6 +423,28 @@ async function renderPersonalPlanBuilder() {
       </div>
     </form>
   `;
+
+  const selectedGoal = plan?.objetivo || null;
+  syncGoalCardSelection(selectedGoal);
+
+  document.querySelectorAll('.goal-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.goal-card').forEach((item) => item.classList.remove('active'));
+      card.classList.add('active');
+
+      const select = document.getElementById('planObjetivo');
+      if (select) {
+        select.value = card.dataset.goal;
+      }
+    });
+  });
+
+  const objectiveSelect = document.getElementById('planObjetivo');
+  if (objectiveSelect) {
+    objectiveSelect.addEventListener('change', (event) => {
+      syncGoalCardSelection(event.target.value);
+    });
+  }
 
   const form = document.getElementById('personalPlanForm');
   if (form) {
