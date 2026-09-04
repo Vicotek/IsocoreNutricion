@@ -975,7 +975,7 @@ export async function getConditionsFromSupabase() {
     console.log('🏥 Obteniendo condiciones desde Supabase...');
     
     const response = await fetch(
-      `${API_URL}/condiciones?order=name.asc&select=*`,
+      `${API_URL}/condiciones?order=nombre.asc&select=*`,
       {
         method: 'GET',
         headers: AUTH_HEADER
