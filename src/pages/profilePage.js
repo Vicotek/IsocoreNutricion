@@ -87,38 +87,7 @@ export function renderProfilePage() {
 
         <!-- TAB: Objetivos Nutricionales -->
         <div class="profile-tab-content" id="tab-objetivos">
-          <div class="profile-section">
-            <h2>Objetivo Nutricional</h2>
-            <p class="section-description">Selecciona tu objetivo principal para recibir recomendaciones personalizadas</p>
-            
-            <div class="goals-grid">
-              <div class="goal-card" data-goal="general">
-                <div class="goal-icon">${getIcon('scale', 26)}</div>
-                <h3>Bienestar General</h3>
-                <p>Mantener una buena salud y energía</p>
-              </div>
-
-              <div class="goal-card" data-goal="weight_loss">
-                <div class="goal-icon">${getIcon('trendDown', 26)}</div>
-                <h3>Pérdida de Peso</h3>
-                <p>Reducir peso de forma saludable</p>
-              </div>
-
-              <div class="goal-card" data-goal="muscle_gain">
-                <div class="goal-icon">${getIcon('muscle', 26)}</div>
-                <h3>Ganancia Muscular</h3>
-                <p>Aumentar masa muscular</p>
-              </div>
-
-              <div class="goal-card" data-goal="performance">
-                <div class="goal-icon">${getIcon('flash', 26)}</div>
-                <h3>Rendimiento Deportivo</h3>
-                <p>Optimizar rendimiento atlético</p>
-              </div>
-            </div>
-
-            <div class="profile-section" id="personalPlanBuilder"></div>
-          </div>
+          <div class="profile-section" id="personalPlanBuilder"></div>
 
           <!-- Estadísticas -->
           <div class="profile-section">
@@ -285,13 +254,6 @@ async function loadProfileData() {
 
   // Plan activo
   displayPlanInfo(profile);
-
-  // Objetivo seleccionado
-  document.querySelectorAll('.goal-card').forEach(card => {
-    if (card.dataset.goal === profile.nutritional_goal) {
-      card.classList.add('active');
-    }
-  });
 
   // Idioma seleccionado
   const languageRadio = document.querySelector(`input[name="language"][value="${profile.language || 'es'}"]`);
@@ -647,24 +609,6 @@ function setupEventListeners() {
     } else {
       alert('Error al guardar el perfil. Revisa la consola.');
     }
-  });
-
-  // Seleccionar objetivo
-  document.querySelectorAll('.goal-card').forEach(card => {
-    card.addEventListener('click', async (e) => {
-      document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-
-      const goal = card.dataset.goal;
-      const result = await ProfileService.updateNutritionalGoal(goal);
-      if (result && result.saved === false) {
-        alert('La selección de objetivo se muestra temporalmente como no persistida: la integración con planes nutricionales está pendiente.');
-      } else if (!result) {
-        alert('Objetivo no válido.');
-      } else {
-        console.log('🎯 Objetivo actualizado:', goal);
-      }
-    });
   });
 
   // Cambiar idioma
