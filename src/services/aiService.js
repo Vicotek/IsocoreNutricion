@@ -4,7 +4,15 @@
  * Fuentes: articles, recipes, supplements, resources
  */
 
-import { API_URL, AUTH_HEADER } from './supabaseClient.js';
+import {
+  API_URL,
+  AUTH_HEADER,
+  getRecursosFromSupabase,
+  getAIConversationsFromSupabase,
+  createAIConversationInSupabase,
+  getConversationMessagesFromSupabase,
+  addMessageToConversationInSupabase
+} from './supabaseClient.js';
 
 let currentUserEmail = null;
 let currentConversation = null;
@@ -51,21 +59,25 @@ export function getSuggestedQuestions() {
  * Obtener conversaciones del usuario
  */
 export async function getConversations() {
-  if (!currentUserEmail) {
-    console.warn('⚠️ No user email set in AIService');
-    return [];
-  }
+  if (!currentUserEmail) return [];
 
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?user_email=eq.${currentUserEmail}&select=id,created_at,question&order=created_at.desc&limit=50`,
-      {
-        headers: AUTH_HEADER
-      }
-    );
+    const { data, error } = await getAIConversationsFromSupabase();
 
-    if (!response.ok) throw new Error('Error fetching conversations');
-    conversations = await response.json();
+    if (error) {
+      console.warn('⚠️ Error cargando conversaciones IA:', error);
+      conversations = [];
+      return conversations;
+    }
+
+    conversations = (Array.isArray(data) ? data : []).map((conv) => ({
+      id: conv.id,
+      title: conv.titulo || 'Nueva conversación',
+      question: conv.titulo || 'Nueva conversación',
+      created_at: conv.created_at,
+      updated_at: conv.updated_at
+    }));
+
     return conversations;
   } catch (error) {
     console.error('Error getting conversations:', error);
@@ -80,16 +92,32 @@ export async function getConversation(conversationId) {
   if (!currentUserEmail || !conversationId) return null;
 
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?id=eq.${conversationId}&user_email=eq.${currentUserEmail}`,
-      {
-        headers: AUTH_HEADER
-      }
-    );
+    const allConversations = conversations.length > 0 ? conversations : await getConversations();
+    const targetConversation = allConversations.find((item) => String(item.id) === String(conversationId));
 
-    if (!response.ok) throw new Error('Error fetching conversation');
-    const data = await response.json();
-    return data[0] || null;
+    const { data, error } = await getConversationMessagesFromSupabase(conversationId);
+
+    if (error) {
+      if (String(error.code) === '42501') {
+        console.warn('⚠️ Conversación no accesible para este usuario');
+      }
+      return null;
+    }
+
+    const messages = Array.isArray(data) ? data : [];
+    const userMessage = messages.find((msg) => msg.rol === 'user');
+    const assistantMessages = messages.filter((msg) => msg.rol === 'assistant');
+    const assistantMessage = assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1] : null;
+
+    return {
+      id: conversationId,
+      question: userMessage?.contenido || targetConversation?.title || 'Nueva conversación',
+      answer: assistantMessage?.contenido || 'Sin respuesta todavía',
+      sources: [],
+      created_at: targetConversation?.created_at || userMessage?.created_at || assistantMessage?.created_at || null,
+      updated_at: targetConversation?.updated_at || null,
+      messages
+    };
   } catch (error) {
     console.error('Error getting conversation:', error);
     return null;
@@ -257,19 +285,20 @@ async function searchSupplements(question) {
 async function searchResources(question) {
   try {
     const keywords = extractKeywords(question);
-    const query = keywords.slice(0, 2).join('|');
+    const query = keywords.slice(0, 2).join(' ').trim();
+    if (!query) return [];
 
-    const response = await fetch(
-      `${API_URL}/resources?title=ilike.%${query}%&or(description.ilike.%${query}%)&limit=3`,
-      {
-        headers: AUTH_HEADER
-      }
-    );
+    const resources = await getRecursosFromSupabase(999, 0);
+    const normalizedQuery = query.toLowerCase();
+    const filtered = resources
+      .filter((resource) => {
+        const title = String(resource.title || '').toLowerCase();
+        const description = String(resource.description || '').toLowerCase();
+        return title.includes(normalizedQuery) || description.includes(normalizedQuery);
+      })
+      .slice(0, 3);
 
-    if (!response.ok) return [];
-    const resources = await response.json();
-
-    return resources.map(r => ({
+    return filtered.map(r => ({
       type: 'resource',
       title: r.title,
       description: r.description,
@@ -338,26 +367,41 @@ export async function saveConversation(question, answer, sources) {
   if (!currentUserEmail) return false;
 
   try {
-    const sourcesJSON = JSON.stringify(sources);
+    const conversationTitle = question.length > 60 ? `${question.slice(0, 57)}...` : question;
 
-    const response = await fetch(`${API_URL}/ai_conversations`, {
-      method: 'POST',
-      headers: {
-        ...AUTH_HEADER,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        user_email: currentUserEmail,
-        question,
-        answer,
-        sources: sourcesJSON,
-        created_at: new Date().toISOString()
-      })
-    });
+    const { data: createdConversation, error: createError } = await createAIConversationInSupabase(conversationTitle);
 
-    if (!response.ok) throw new Error('Error saving conversation');
-    
-    console.log('✅ Conversación guardada');
+    if (createError) {
+      if (String(createError.code) === '28000') {
+        console.warn('⚠️ Sesión inválida al crear conversación');
+      }
+      throw new Error(createError.message || 'Error creating conversation');
+    }
+
+    const conversation = Array.isArray(createdConversation) ? createdConversation[0] : createdConversation;
+    const conversationId = conversation?.id;
+
+    if (!conversationId) {
+      throw new Error('No se pudo obtener ID de conversación creada');
+    }
+
+    const userInsert = await addMessageToConversationInSupabase(conversationId, 'user', question);
+    if (userInsert.error) {
+      throw new Error(userInsert.error.message || 'Error adding user message');
+    }
+
+    const answerWithSources = sources?.length
+      ? `${answer}\n\nFuentes sugeridas: ${sources.map((s) => s.title).filter(Boolean).slice(0, 3).join(' | ')}`
+      : answer;
+
+    const assistantInsert = await addMessageToConversationInSupabase(conversationId, 'assistant', answerWithSources);
+    if (assistantInsert.error) {
+      throw new Error(assistantInsert.error.message || 'Error adding assistant message');
+    }
+
+    await loadConversationHistory();
+
+    console.log('✅ Conversación guardada por RPC');
     return true;
   } catch (error) {
     console.error('Error saving conversation:', error);
@@ -372,15 +416,23 @@ async function loadConversationHistory() {
   if (!currentUserEmail) return [];
 
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?user_email=eq.${currentUserEmail}&order=created_at.desc&limit=50`,
-      {
-        headers: AUTH_HEADER
-      }
-    );
+    const { data, error } = await getAIConversationsFromSupabase();
 
-    if (!response.ok) throw new Error('Error loading history');
-    conversations = await response.json();
+    if (error) {
+      if (String(error.code) === '28000') {
+        console.warn('⚠️ Sesión no válida cargando historial IA');
+      }
+      conversations = [];
+      return conversations;
+    }
+
+    conversations = (Array.isArray(data) ? data : []).map((conv) => ({
+      id: conv.id,
+      title: conv.titulo || 'Nueva conversación',
+      question: conv.titulo || 'Nueva conversación',
+      created_at: conv.created_at,
+      updated_at: conv.updated_at
+    }));
     return conversations;
   } catch (error) {
     console.error('Error loading conversation history:', error);
@@ -413,18 +465,12 @@ export async function getAIStats() {
   if (!currentUserEmail) return null;
 
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?user_email=eq.${currentUserEmail}&select=id`,
-      {
-        headers: AUTH_HEADER
-      }
-    );
-
-    if (!response.ok) return null;
-    const data = await response.json();
+    const { data, error } = await getAIConversationsFromSupabase();
+    if (error) return null;
+    const items = Array.isArray(data) ? data : [];
 
     return {
-      totalConversations: data.length,
+      totalConversations: items.length,
       lastConversation: conversations[0]?.created_at || null
     };
   } catch (error) {

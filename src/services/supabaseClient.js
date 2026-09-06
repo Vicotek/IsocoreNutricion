@@ -416,6 +416,25 @@ function normalizeArticleRow(row, language = 'es') {
   };
 }
 
+function normalizeResourceRow(row) {
+  if (!row) return row;
+
+  return {
+    id: row.id,
+    title: row.titulo,
+    description: row.descripcion,
+    type: row.tipo || 'otro',
+    url: row.url,
+    category: row.categoria,
+    tier: row.nivel_acceso === 'gratis' ? 'free' : row.nivel_acceso,
+    image: row.imagen_url,
+    order: row.orden ?? 0,
+    published: row.activo !== false,
+    active: row.activo !== false,
+    created_at: row.created_at
+  };
+}
+
 export async function getArticlesFromSupabase(limit = 999, offset = 0) {
   try {
     console.log('📚 Obteniendo artículos desde Supabase (base_conocimientos)...');
@@ -1152,6 +1171,155 @@ export async function getScientificReferencesFromSupabase() {
     console.error('❌ Error obteniendo referencias científicas:', error);
     return [];
   }
+}
+
+/**
+ * Obtener recursos públicos desde Supabase
+ * @param {number} limit - Límite de resultados
+ * @param {number} offset - Offset para paginación
+ * @returns {Promise<Array>} - Array de recursos normalizados
+ */
+export async function getRecursosFromSupabase(limit = 999, offset = 0) {
+  try {
+    const response = await fetch(
+      `${API_URL}/recursos?order=orden.asc,created_at.desc&limit=${limit}&offset=${offset}&select=*`,
+      {
+        method: 'GET',
+        headers: AUTH_HEADER
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`❌ Error obteniendo recursos (${response.status})`);
+      return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeResourceRow) : [];
+  } catch (error) {
+    console.error('❌ Error obteniendo recursos:', error);
+    return [];
+  }
+}
+
+/**
+ * Buscar recursos por título/descripcion
+ * @param {string} query - Término de búsqueda
+ * @returns {Promise<Array>} - Recursos normalizados
+ */
+export async function searchRecursosInSupabase(query) {
+  try {
+    if (!query || query.trim().length < 2) return [];
+
+    const encoded = encodeURIComponent(query.trim());
+    const response = await fetch(
+      `${API_URL}/recursos?or=(titulo.ilike.%${encoded}%,descripcion.ilike.%${encoded}%)&order=orden.asc,created_at.desc&select=*`,
+      {
+        method: 'GET',
+        headers: AUTH_HEADER
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`❌ Error buscando recursos (${response.status})`);
+      return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeResourceRow) : [];
+  } catch (error) {
+    console.error('❌ Error buscando recursos:', error);
+    return [];
+  }
+}
+
+/**
+ * RPC conversaciones IA (privadas por usuario)
+ */
+export async function getAIConversationsFromSupabase(sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    return { data: [], error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  const { data, error } = await callRpc('app_get_conversaciones', {
+    p_sesion_token: sesionToken
+  });
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  return { data: Array.isArray(data) ? data : [], error: null };
+}
+
+export async function createAIConversationInSupabase(title = 'Nueva conversación', sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    return { data: null, error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  return callRpc('app_crear_conversacion', {
+    p_sesion_token: sesionToken,
+    p_titulo: title
+  });
+}
+
+export async function getConversationMessagesFromSupabase(conversationId, sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    return { data: [], error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  if (!conversationId) {
+    return { data: [], error: { code: '400', message: 'Falta conversationId' } };
+  }
+
+  const { data, error } = await callRpc('app_get_mensajes_conversacion', {
+    p_sesion_token: sesionToken,
+    p_conversation_id: Number(conversationId)
+  });
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  return { data: Array.isArray(data) ? data : [], error: null };
+}
+
+export async function addMessageToConversationInSupabase(conversationId, role, content, sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    return { data: null, error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  if (!conversationId || !role || !content?.trim()) {
+    return { data: null, error: { code: '400', message: 'Faltan datos del mensaje' } };
+  }
+
+  return callRpc('app_agregar_mensaje', {
+    p_sesion_token: sesionToken,
+    p_conversation_id: Number(conversationId),
+    p_rol: role,
+    p_contenido: content.trim()
+  });
+}
+
+export async function deleteAIConversationFromSupabase(conversationId, sesionToken = getAuthToken()) {
+  if (!sesionToken) {
+    return { data: false, error: { code: '28000', message: 'Sesión no válida' } };
+  }
+
+  if (!conversationId) {
+    return { data: false, error: { code: '400', message: 'Falta conversationId' } };
+  }
+
+  const { data, error } = await callRpc('app_eliminar_conversacion', {
+    p_sesion_token: sesionToken,
+    p_conversation_id: Number(conversationId)
+  });
+
+  if (error) {
+    return { data: false, error };
+  }
+
+  return { data: Boolean(data), error: null };
 }
 
 /**

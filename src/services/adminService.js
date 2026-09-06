@@ -4,7 +4,15 @@
  * Roles: Admin, Editor
  */
 
-import { API_URL, AUTH_HEADER } from './supabaseClient.js';
+import {
+  API_URL,
+  AUTH_HEADER,
+  getRecursosFromSupabase,
+  searchRecursosInSupabase,
+  getAIConversationsFromSupabase,
+  deleteAIConversationFromSupabase
+} from './supabaseClient.js';
+import { getAuthToken } from './authService.js';
 
 let currentUserEmail = null;
 let currentUserRole = 'admin'; // admin, editor
@@ -377,12 +385,7 @@ export async function toggleSupplementPublish(supplementId, published) {
 
 export async function getAllResources(limit = 100, offset = 0) {
   try {
-    const response = await fetch(
-      `${API_URL}/resources?select=*&order=created_at.desc&limit=${limit}&offset=${offset}`,
-      { headers: AUTH_HEADER }
-    );
-    if (!response.ok) throw new Error('Error fetching resources');
-    return await response.json();
+    return await getRecursosFromSupabase(limit, offset);
   } catch (error) {
     console.error('Error getting resources:', error);
     return [];
@@ -391,12 +394,7 @@ export async function getAllResources(limit = 100, offset = 0) {
 
 export async function searchResources(query) {
   try {
-    const response = await fetch(
-      `${API_URL}/resources?or(title.ilike.%${query}%,description.ilike.%${query}%)&select=*`,
-      { headers: AUTH_HEADER }
-    );
-    if (!response.ok) throw new Error('Error searching resources');
-    return await response.json();
+    return await searchRecursosInSupabase(query);
   } catch (error) {
     console.error('Error searching resources:', error);
     return [];
@@ -406,14 +404,20 @@ export async function searchResources(query) {
 export async function createResource(resourceData) {
   try {
     const response = await fetch(
-      `${API_URL}/resources`,
+      `${API_URL}/recursos`,
       {
         method: 'POST',
         headers: AUTH_HEADER,
         body: JSON.stringify({
-          ...resourceData,
-          created_by: currentUserEmail,
-          created_at: new Date().toISOString()
+          titulo: resourceData.title || resourceData.titulo || '',
+          descripcion: resourceData.description || resourceData.descripcion || '',
+          tipo: resourceData.type || resourceData.tipo || 'otro',
+          url: resourceData.url || null,
+          categoria: resourceData.category || resourceData.categoria || null,
+          nivel_acceso: resourceData.tier === 'free' ? 'gratis' : (resourceData.tier || resourceData.nivel_acceso || 'gratis'),
+          imagen_url: resourceData.image || resourceData.imagen_url || null,
+          orden: resourceData.order ?? resourceData.orden ?? 0,
+          activo: resourceData.published ?? resourceData.activo ?? true
         })
       }
     );
@@ -428,11 +432,29 @@ export async function createResource(resourceData) {
 export async function updateResource(resourceId, updates) {
   try {
     const response = await fetch(
-      `${API_URL}/resources?id=eq.${resourceId}`,
+      `${API_URL}/recursos?id=eq.${resourceId}`,
       {
         method: 'PATCH',
         headers: AUTH_HEADER,
-        body: JSON.stringify({ ...updates, updated_at: new Date().toISOString() })
+        body: JSON.stringify({
+          ...(updates.title !== undefined ? { titulo: updates.title } : {}),
+          ...(updates.titulo !== undefined ? { titulo: updates.titulo } : {}),
+          ...(updates.description !== undefined ? { descripcion: updates.description } : {}),
+          ...(updates.descripcion !== undefined ? { descripcion: updates.descripcion } : {}),
+          ...(updates.type !== undefined ? { tipo: updates.type } : {}),
+          ...(updates.tipo !== undefined ? { tipo: updates.tipo } : {}),
+          ...(updates.url !== undefined ? { url: updates.url } : {}),
+          ...(updates.category !== undefined ? { categoria: updates.category } : {}),
+          ...(updates.categoria !== undefined ? { categoria: updates.categoria } : {}),
+          ...(updates.tier !== undefined ? { nivel_acceso: updates.tier === 'free' ? 'gratis' : updates.tier } : {}),
+          ...(updates.nivel_acceso !== undefined ? { nivel_acceso: updates.nivel_acceso } : {}),
+          ...(updates.image !== undefined ? { imagen_url: updates.image } : {}),
+          ...(updates.imagen_url !== undefined ? { imagen_url: updates.imagen_url } : {}),
+          ...(updates.order !== undefined ? { orden: updates.order } : {}),
+          ...(updates.orden !== undefined ? { orden: updates.orden } : {}),
+          ...(updates.published !== undefined ? { activo: updates.published } : {}),
+          ...(updates.activo !== undefined ? { activo: updates.activo } : {})
+        })
       }
     );
     if (!response.ok) throw new Error('Error updating resource');
@@ -446,7 +468,7 @@ export async function updateResource(resourceId, updates) {
 export async function deleteResource(resourceId) {
   try {
     const response = await fetch(
-      `${API_URL}/resources?id=eq.${resourceId}`,
+      `${API_URL}/recursos?id=eq.${resourceId}`,
       { method: 'DELETE', headers: AUTH_HEADER }
     );
     if (!response.ok) throw new Error('Error deleting resource');
@@ -538,12 +560,21 @@ export async function deletePlan(planId) {
 
 export async function getAIConversations(limit = 50, offset = 0) {
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?select=*&order=created_at.desc&limit=${limit}&offset=${offset}`,
-      { headers: AUTH_HEADER }
-    );
-    if (!response.ok) throw new Error('Error fetching conversations');
-    return await response.json();
+    const token = getAuthToken();
+    const { data, error } = await getAIConversationsFromSupabase(token);
+
+    if (error) {
+      console.warn('⚠️ Error obteniendo conversaciones IA por RPC:', error);
+      return [];
+    }
+
+    return data
+      .slice(offset, offset + limit)
+      .map((conv) => ({
+        ...conv,
+        question: conv.titulo || 'Conversación sin título',
+        user_email: currentUserEmail
+      }));
   } catch (error) {
     console.error('Error getting conversations:', error);
     return [];
@@ -552,12 +583,15 @@ export async function getAIConversations(limit = 50, offset = 0) {
 
 export async function deleteAIConversation(conversationId) {
   try {
-    const response = await fetch(
-      `${API_URL}/ai_conversations?id=eq.${conversationId}`,
-      { method: 'DELETE', headers: AUTH_HEADER }
-    );
-    if (!response.ok) throw new Error('Error deleting conversation');
-    return true;
+    const token = getAuthToken();
+    const { data, error } = await deleteAIConversationFromSupabase(conversationId, token);
+
+    if (error) {
+      console.warn('⚠️ Error eliminando conversación IA por RPC:', error);
+      return false;
+    }
+
+    return Boolean(data);
   } catch (error) {
     console.error('Error deleting conversation:', error);
     return false;
@@ -570,22 +604,26 @@ export async function deleteAIConversation(conversationId) {
 
 export async function loadAdminStats() {
   try {
-    const [users, articles, recipes, supplements, resources, conversations] = await Promise.all([
+    const token = getAuthToken();
+
+    const [users, articles, recipes, supplements, resources, conversationsResponse] = await Promise.all([
       fetch(`${API_URL}/usuarios?select=count`, { headers: AUTH_HEADER }).then(r => r.json()),
       fetch(`${API_URL}/articles?select=count`, { headers: AUTH_HEADER }).then(r => r.json()),
       fetch(`${API_URL}/recipes?select=count`, { headers: AUTH_HEADER }).then(r => r.json()),
       fetch(`${API_URL}/supplements?select=count`, { headers: AUTH_HEADER }).then(r => r.json()),
-      fetch(`${API_URL}/resources?select=count`, { headers: AUTH_HEADER }).then(r => r.json()),
-      fetch(`${API_URL}/ai_conversations?select=count`, { headers: AUTH_HEADER }).then(r => r.json())
+      getRecursosFromSupabase(999, 0),
+      getAIConversationsFromSupabase(token)
     ]);
+
+    const conversations = conversationsResponse?.error ? [] : (conversationsResponse?.data || []);
 
     adminStats = {
       totalUsers: users[0]?.count || 0,
       totalArticles: articles[0]?.count || 0,
       totalRecipes: recipes[0]?.count || 0,
       totalSupplements: supplements[0]?.count || 0,
-      totalResources: resources[0]?.count || 0,
-      totalConversations: conversations[0]?.count || 0
+      totalResources: Array.isArray(resources) ? resources.length : 0,
+      totalConversations: Array.isArray(conversations) ? conversations.length : 0
     };
 
     return adminStats;
