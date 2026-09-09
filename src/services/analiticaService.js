@@ -43,6 +43,10 @@ async function callAnaliticaRpc(functionName, params = {}) {
 }
 
 export async function agregarResultadoAnalitica(payload = {}) {
+  const normalizedSexo = typeof payload.sexo === 'string' && payload.sexo.trim()
+    ? payload.sexo.trim().toLowerCase()
+    : null;
+
   const cleaned = {
     p_marcador: String(payload.marcador || '').trim(),
     p_valor: Number(payload.valor),
@@ -50,7 +54,7 @@ export async function agregarResultadoAnalitica(payload = {}) {
     ...(payload.fecha_analitica ? { p_fecha_analitica: payload.fecha_analitica } : {}),
     ...(payload.notas ? { p_notas: String(payload.notas).trim() } : {}),
     ...(payload.documento_origen ? { p_documento_origen: String(payload.documento_origen).trim() } : {}),
-    ...(payload.sexo ? { p_sexo: payload.sexo } : {})
+    p_sexo: normalizedSexo
   };
 
   if (!cleaned.p_marcador || Number.isNaN(cleaned.p_valor)) {
