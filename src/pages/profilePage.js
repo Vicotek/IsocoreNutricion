@@ -6,6 +6,7 @@
 import * as ProfileService from '../services/profileService.js';
 import * as FavoritesService from '../services/favoritesService.js';
 import * as NutritionalPlansService from '../services/nutritionalPlansService.js';
+import * as AnaliticaService from '../services/analiticaService.js';
 import { API_URL, AUTH_HEADER } from '../services/supabaseClient.js';
 import { getIcon } from '../components/icons.js';
 
@@ -38,6 +39,7 @@ export function renderProfilePage() {
       <div class="profile-tabs">
         <button class="profile-tab active" data-tab="personal">${getIcon('user', 16)} Personal</button>
         <button class="profile-tab" data-tab="objetivos">${getIcon('target', 16)} Objetivos</button>
+        <button class="profile-tab" data-tab="analitica">${getIcon('flask', 16)} Mi Analítica</button>
         <button class="profile-tab" data-tab="favoritos">${getIcon('heart', 16)} Favoritos</button>
         <button class="profile-tab" data-tab="historial">${getIcon('clock', 16)} Historial</button>
         <button class="profile-tab" data-tab="notificaciones">${getIcon('bell', 16)} Notificaciones</button>
@@ -124,6 +126,58 @@ export function renderProfilePage() {
           <div class="profile-section">
             <h2>Tu Actividad</h2>
             <div class="stats-grid" id="statsDisplay"></div>
+          </div>
+        </div>
+
+        <!-- TAB: Mi Analítica -->
+        <div class="profile-tab-content" id="tab-analitica">
+          <div class="profile-section">
+            <h2>Mi Analítica</h2>
+            <p class="section-description">Guarda tus marcadores para ver contexto educativo automático: rangos, relaciones y patrones de reflexión.</p>
+
+            <form class="profile-form" id="analiticaForm">
+              <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap: 16px;">
+                <div class="form-group">
+                  <label>Marcador</label>
+                  <input type="text" id="analiticaMarcador" class="form-input" list="analiticaMarcadoresList" placeholder="Ej. Ferritina" required />
+                  <datalist id="analiticaMarcadoresList"></datalist>
+                </div>
+                <div class="form-group">
+                  <label>Valor</label>
+                  <input type="number" id="analiticaValor" class="form-input" step="any" placeholder="Ej. 180" required />
+                </div>
+                <div class="form-group">
+                  <label>Unidad</label>
+                  <input type="text" id="analiticaUnidad" class="form-input" placeholder="Ej. ng/mL" />
+                </div>
+              </div>
+
+              <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap: 16px;">
+                <div class="form-group">
+                  <label>Fecha de analítica</label>
+                  <input type="date" id="analiticaFecha" class="form-input" value="${getTodayDateISO()}" />
+                </div>
+                <div class="form-group">
+                  <label>Sexo biológico (opcional)</label>
+                  <select id="analiticaSexo" class="form-input">
+                    <option value="">Prefiero no especificar</option>
+                    <option value="mujer">Mujer</option>
+                    <option value="hombre">Hombre</option>
+                  </select>
+                  <small class="analitica-help">Algunos marcadores tienen rangos distintos por sexo. Si no lo indicas, podría no mostrarse el rango numérico.</small>
+                </div>
+              </div>
+
+              <div class="form-actions" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+                <button type="submit" class="btn btn-primary">${getIcon('plus', 16)} Añadir resultado</button>
+              </div>
+              <div class="analitica-form-status" id="analiticaFormStatus" aria-live="polite"></div>
+            </form>
+          </div>
+
+          <div class="profile-section">
+            <h2>Resultados con contexto</h2>
+            <div class="analitica-results" id="analiticaResultsList"></div>
           </div>
         </div>
 
@@ -235,6 +289,7 @@ export function renderProfilePage() {
 function initializeProfilePage() {
   setupTabs();
   loadProfileData();
+  initializeAnaliticaSection();
   setupEventListeners();
 }
 
@@ -244,11 +299,12 @@ function initializeProfilePage() {
 function setupTabs() {
   document.querySelectorAll('.profile-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
-      const tabName = e.target.dataset.tab;
+      const tabButton = e.currentTarget;
+      const tabName = tabButton.dataset.tab;
       
       // Actualizar botones activos
       document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-      e.target.classList.add('active');
+      tabButton.classList.add('active');
       
       // Actualizar contenido
       document.querySelectorAll('.profile-tab-content').forEach(content => {
@@ -261,6 +317,7 @@ function setupTabs() {
       if (tabName === 'historial') loadHistory();
       if (tabName === 'notificaciones') loadNotifications();
       if (tabName === 'objetivos') loadStats();
+      if (tabName === 'analitica') loadAnaliticaResults();
     });
   });
 }
@@ -652,6 +709,255 @@ async function loadStats() {
     `;
   } catch (error) {
     statsDisplay.innerHTML = '<div class="error">Error cargando estadísticas</div>';
+  }
+}
+
+function getTodayDateISO() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().split('T')[0];
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatAnaliticaDate(value) {
+  if (!value) return 'Sin fecha';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('es-ES');
+}
+
+function formatRange(min, max) {
+  if (min === null || min === undefined || max === null || max === undefined) {
+    return 'No disponible';
+  }
+  return `${min} - ${max}`;
+}
+
+function getRangoFuncionalBadge(dentroRangoFuncional) {
+  if (dentroRangoFuncional === true) {
+    return '<span class="analitica-badge analitica-badge-ok">Dentro de rango funcional</span>';
+  }
+
+  if (dentroRangoFuncional === false) {
+    return '<span class="analitica-badge analitica-badge-warn">Fuera de rango funcional</span>';
+  }
+
+  return '<span class="analitica-badge analitica-badge-muted">Rango funcional no evaluable</span>';
+}
+
+function getPatronLevelClass(nivel) {
+  const normalized = String(nivel || '').toLowerCase();
+  if (normalized.includes('rojo') || normalized.includes('alto')) return 'analitica-level-red';
+  if (normalized.includes('amarillo') || normalized.includes('medio') || normalized.includes('moderado')) return 'analitica-level-yellow';
+  return 'analitica-level-green';
+}
+
+function setAnaliticaFormStatus(message, type = 'info') {
+  const status = document.getElementById('analiticaFormStatus');
+  if (!status) return;
+
+  status.textContent = message || '';
+  status.className = `analitica-form-status ${type}`;
+}
+
+async function initializeAnaliticaSection() {
+  await loadAnaliticaMarkerSuggestions();
+  await loadAnaliticaResults();
+  setupAnaliticaEventListeners();
+}
+
+async function loadAnaliticaMarkerSuggestions() {
+  const datalist = document.getElementById('analiticaMarcadoresList');
+  if (!datalist) return;
+
+  const markers = await AnaliticaService.getMarcadoresSugeridos();
+  datalist.innerHTML = markers
+    .map((marker) => `<option value="${escapeHtml(marker)}"></option>`)
+    .join('');
+}
+
+async function loadAnaliticaResults() {
+  const list = document.getElementById('analiticaResultsList');
+  if (!list) return;
+
+  list.innerHTML = '<div class="loading">Cargando resultados de analítica...</div>';
+
+  const result = await AnaliticaService.getResultadosConContexto();
+  if (!result.ok) {
+    list.innerHTML = '<div class="error">No se pudieron cargar tus resultados de analítica.</div>';
+    return;
+  }
+
+  if (!result.data.length) {
+    list.innerHTML = '<div class="empty-state">Aún no tienes resultados guardados.</div>';
+    return;
+  }
+
+  list.innerHTML = result.data.map((item) => {
+    const valorText = `${item.valor ?? '-'}${item.unidad ? ` ${escapeHtml(item.unidad)}` : ''}`;
+    const relaciones = Array.isArray(item.relaciones) ? item.relaciones : [];
+    const patrones = Array.isArray(item.patrones) ? item.patrones : [];
+
+    const relacionesMarkup = relaciones.length
+      ? `
+        <div class="analitica-context-block">
+          <h4>Relaciones conocidas con tus marcadores</h4>
+          <ul>
+            ${relaciones.map((relacion) => `
+              <li>
+                Relacionado con ${escapeHtml(relacion.marcador_relacionado)} (${escapeHtml(relacion.tipo_relacion || 'contexto')}):
+                ${escapeHtml(relacion.descripcion || 'Sin descripción')}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `
+      : '';
+
+    const patronesMarkup = patrones.length
+      ? `
+        <div class="analitica-context-block">
+          <h4>Notas para tu reflexión</h4>
+          <div class="analitica-pattern-list">
+            ${patrones.map((patron) => `
+              <article class="analitica-pattern-item">
+                <div class="analitica-pattern-header">
+                  <strong>${escapeHtml(patron.nombre_patron || 'Patrón interpretativo')}</strong>
+                  <span class="analitica-level ${getPatronLevelClass(patron.nivel_atencion)}">${escapeHtml(patron.nivel_atencion || 'nivel informativo')}</span>
+                </div>
+                <p>${escapeHtml(patron.mensaje_reflexion || 'Sin mensaje de reflexión disponible.')}</p>
+                <p class="analitica-que-no-es"><strong>Qué no es:</strong> ${escapeHtml(patron.que_no_es || 'Este patrón no constituye un diagnóstico ni sustituye valoración profesional.')}</p>
+              </article>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+    const rangoAmbiguoMarkup = item.rango_ambiguo_por_sexo
+      ? `
+        <div class="analitica-ambiguous">
+          ${getIcon('info', 16)}
+          <span>Indica tu sexo biológico para ver el rango de referencia de este marcador.</span>
+        </div>
+      `
+      : '';
+
+    const rangoTextoMarkup = item.rango_texto
+      ? `<p class="analitica-rango-texto"><strong>Referencia adicional:</strong> ${escapeHtml(item.rango_texto)}</p>`
+      : '';
+
+    return `
+      <article class="analitica-card">
+        <div class="analitica-card-header">
+          <div>
+            <h3>${escapeHtml(item.marcador || 'Marcador sin nombre')}</h3>
+            <p class="analitica-value">${valorText}</p>
+            <small>Fecha: ${formatAnaliticaDate(item.fecha_analitica)}</small>
+          </div>
+          <button class="btn-small btn-danger analitica-delete-btn" data-result-id="${item.resultado_id}">
+            ${getIcon('trash', 14)} Eliminar
+          </button>
+        </div>
+
+        <div class="analitica-ranges">
+          <p><strong>Rango convencional:</strong> ${formatRange(item.rango_convencional_min, item.rango_convencional_max)}</p>
+          <p><strong>Rango funcional:</strong> ${formatRange(item.rango_funcional_min, item.rango_funcional_max)}</p>
+          ${rangoTextoMarkup}
+        </div>
+
+        ${rangoAmbiguoMarkup}
+
+        <div class="analitica-status">
+          ${getRangoFuncionalBadge(item.dentro_rango_funcional)}
+        </div>
+
+        ${relacionesMarkup}
+        ${patronesMarkup}
+      </article>
+    `;
+  }).join('');
+}
+
+function setupAnaliticaEventListeners() {
+  const form = document.getElementById('analiticaForm');
+  const list = document.getElementById('analiticaResultsList');
+
+  if (form && form.dataset.bound !== 'true') {
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const marcador = document.getElementById('analiticaMarcador').value.trim();
+      const valorRaw = document.getElementById('analiticaValor').value;
+      const unidad = document.getElementById('analiticaUnidad').value.trim();
+      const fecha = document.getElementById('analiticaFecha').value;
+      const sexo = document.getElementById('analiticaSexo').value;
+      const valor = Number(valorRaw);
+
+      if (!marcador || Number.isNaN(valor)) {
+        setAnaliticaFormStatus('Completa marcador y valor con un número válido.', 'error');
+        return;
+      }
+
+      setAnaliticaFormStatus('Guardando resultado...', 'info');
+
+      const result = await AnaliticaService.agregarResultadoAnalitica({
+        marcador,
+        valor,
+        unidad: unidad || null,
+        fecha_analitica: fecha || null,
+        sexo: sexo || null
+      });
+
+      if (!result.ok) {
+        setAnaliticaFormStatus(
+          result.error?.code === '28000'
+            ? 'Tu sesión no es válida. Vuelve a iniciar sesión.'
+            : 'No se pudo guardar el resultado de analítica.',
+          'error'
+        );
+        return;
+      }
+
+      form.reset();
+      document.getElementById('analiticaFecha').value = getTodayDateISO();
+      setAnaliticaFormStatus('Resultado guardado correctamente.', 'success');
+      await loadAnaliticaResults();
+    });
+  }
+
+  if (list && list.dataset.bound !== 'true') {
+    list.dataset.bound = 'true';
+    list.addEventListener('click', async (event) => {
+      const deleteBtn = event.target.closest('.analitica-delete-btn');
+      if (!deleteBtn) return;
+
+      const resultadoId = deleteBtn.dataset.resultId;
+      const confirmed = window.confirm('¿Seguro que quieres eliminar este resultado?');
+      if (!confirmed) return;
+
+      const response = await AnaliticaService.eliminarResultadoAnalitica(resultadoId);
+      if (!response.ok) {
+        if (String(response.error?.code) === '42501') {
+          alert('No tienes permisos para eliminar este resultado.');
+          return;
+        }
+        alert('No se pudo eliminar el resultado de analítica.');
+        return;
+      }
+
+      setAnaliticaFormStatus('Resultado eliminado correctamente.', 'success');
+      await loadAnaliticaResults();
+    });
   }
 }
 
