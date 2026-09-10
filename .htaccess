@@ -1,0 +1,15 @@
+# Cache policy to reduce stale JS/CSS after deploys.
+# Keep HTML revalidated and lower TTL for static assets so the browser
+# does not keep serving old code for several minutes after a push.
+
+<FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache"
+</FilesMatch>
+
+<FilesMatch "\.(js|css)$">
+    Header set Cache-Control "no-cache, max-age=60"
+</FilesMatch>
+
+<FilesMatch "\.(png|jpg|jpeg|gif|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=60"
+</FilesMatch>
