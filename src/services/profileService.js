@@ -317,23 +317,38 @@ export async function getHistory(limit = 20) {
  */
 export async function getNotifications() {
   try {
-    console.log('🔔 Obteniendo notificaciones...');
-    
-    const response = await fetch(
-      `${API_URL}/notifications?email=eq.${encodeURIComponent(currentUserEmail)}&read=eq.false&order=created_at.desc`,
-      {
-        method: 'GET',
-        headers: AUTH_HEADER
-      }
-    );
+    console.log('🔔 Obteniendo notificaciones desde RPC...');
 
-    if (!response.ok) {
-      throw new Error('Error obteniendo notificaciones');
+    const sesionToken = getAuthToken();
+    if (!sesionToken) {
+      console.warn('⚠️ No hay sesión activa para cargar notificaciones');
+      return [];
     }
 
-    const notifications = await response.json();
-    console.log(`✅ ${notifications.length} notificaciones no leídas`);
-    return notifications;
+    const { data, error } = await callProfileRpc('app_get_notificaciones', {
+      p_sesion_token: sesionToken,
+      p_solo_no_leidas: true
+    });
+
+    if (error) {
+      console.warn('⚠️ Error obteniendo notificaciones desde RPC:', error);
+      return [];
+    }
+
+    const notifications = Array.isArray(data) ? data : [];
+    const normalized = notifications.map((item) => ({
+      id: item.id ?? null,
+      email: item.email || currentUserEmail || '',
+      type: item.tipo || item.type || 'info',
+      title: item.titulo || item.title || 'Notificación',
+      message: item.mensaje || item.message || '',
+      read: item.leida ?? item.read ?? false,
+      created_at: item.created_at || null,
+      updated_at: item.updated_at || null
+    }));
+
+    console.log(`✅ ${normalized.length} notificaciones no leídas obtenidas desde RPC`);
+    return normalized;
   } catch (error) {
     console.error('❌ Error obteniendo notificaciones:', error);
     return [];
@@ -347,16 +362,23 @@ export async function getNotifications() {
  */
 export async function markNotificationAsRead(notificationId) {
   try {
-    const response = await fetch(
-      `${API_URL}/notifications?id=eq.${notificationId}`,
-      {
-        method: 'PATCH',
-        headers: AUTH_HEADER,
-        body: JSON.stringify({ read: true })
-      }
-    );
+    const sesionToken = getAuthToken();
+    if (!sesionToken) {
+      console.warn('⚠️ No hay sesión activa para marcar notificación como leída');
+      return false;
+    }
 
-    return response.ok;
+    const { error } = await callProfileRpc('app_marcar_notificacion_leida', {
+      p_sesion_token: sesionToken,
+      p_notificacion_id: Number(notificationId)
+    });
+
+    if (error) {
+      console.warn('⚠️ Error marcando notificación como leída:', error);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error('❌ Error marcando notificación como leída:', error);
     return false;
