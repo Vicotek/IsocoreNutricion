@@ -107,7 +107,6 @@ export async function getUserPlanFromSupabase(email) {
     
     if (data && data.length > 0) {
       const user = data[0];
-      setCachedUser({ ...user, email });
       const plan = normalizePlan(user.plan);
 
       console.log(`✅ Plan obtenido desde Supabase: ${plan}`);
