@@ -9,6 +9,36 @@ export const AUTH_HEADER = {
   'Content-Type': 'application/json'
 };
 
+const USER_CACHE_TTL_MS = 60 * 1000;
+const userCache = new Map();
+
+export function getCachedUser(email) {
+  if (!email) return null;
+
+  const key = String(email).trim().toLowerCase();
+  const cached = userCache.get(key);
+
+  if (!cached) return null;
+
+  const isStale = Date.now() - cached.savedAt > USER_CACHE_TTL_MS;
+  if (isStale) {
+    userCache.delete(key);
+    return null;
+  }
+
+  return cached.user;
+}
+
+export function setCachedUser(user) {
+  if (!user || !user.email) return;
+
+  const key = String(user.email).trim().toLowerCase();
+  userCache.set(key, {
+    user,
+    savedAt: Date.now()
+  });
+}
+
 async function callRpc(functionName, params = {}) {
   const token = getAuthToken();
 
@@ -50,6 +80,11 @@ let supabaseClient = null;
 export async function getUserPlanFromSupabase(email) {
   if (!email) return null;
 
+  const cachedUser = getCachedUser(email);
+  if (cachedUser && cachedUser.plan !== undefined && cachedUser.plan !== null) {
+    return normalizePlan(cachedUser.plan);
+  }
+
   try {
     console.log(`📊 Obteniendo plan desde Supabase para: ${email}`);
     
@@ -71,7 +106,9 @@ export async function getUserPlanFromSupabase(email) {
     const data = await response.json();
     
     if (data && data.length > 0) {
-      const plan = normalizePlan(data[0].plan);
+      const user = data[0];
+      setCachedUser({ ...user, email });
+      const plan = normalizePlan(user.plan);
 
       console.log(`✅ Plan obtenido desde Supabase: ${plan}`);
       return plan;
@@ -127,6 +164,11 @@ export async function updateUserPlanInSupabase(userId, plan) {
 export async function getUserFromSupabase(email) {
   if (!email) return null;
 
+  const cachedUser = getCachedUser(email);
+  if (cachedUser) {
+    return cachedUser;
+  }
+
   try {
     // Vista segura (usuarios_publicas): expone solo columnas no sensibles
     // (nunca password_hash / tokens) — la tabla real usuarios sigue sin
@@ -142,7 +184,11 @@ export async function getUserFromSupabase(email) {
     if (!response.ok) return null;
 
     const data = await response.json();
-    return data && data.length > 0 ? data[0] : null;
+    const user = data && data.length > 0 ? data[0] : null;
+    if (user) {
+      setCachedUser(user);
+    }
+    return user;
   } catch (error) {
     console.error('Error obteniendo usuario:', error);
     return null;
@@ -199,7 +245,7 @@ export function subscribeToUserPlan(email, callback) {
   if (!email || !callback) return null;
 
   let lastPlan = null;
-  const pollInterval = 5000; // Consultar cada 5 segundos
+  const pollInterval = 30000; // Consultar cada 30 segundos
 
   const interval = setInterval(async () => {
     try {

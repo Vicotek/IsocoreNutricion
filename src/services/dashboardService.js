@@ -4,6 +4,7 @@
  */
 
 import {
+  getCachedUser,
   getUserFromSupabase,
   getRecentActivityFromSupabase,
   getFavoritesFromSupabase
@@ -31,8 +32,13 @@ export async function loadDashboard(email) {
   try {
     console.log('📊 DashboardService: Cargando dashboard para', email);
 
-    // Obtener datos del usuario
-    const user = await getUserFromSupabase(email);
+    // Obtener datos del usuario desde caché compartida si existe y aún está fresca.
+    // Esto evita reconsultar usuarios_publicas duplicadas cuando login y dashboard
+    // se inicializan en la misma sesión.
+    let user = getCachedUser(email);
+    if (!user) {
+      user = await getUserFromSupabase(email);
+    }
     if (!user) {
       console.warn('⚠️ Usuario no encontrado en Supabase, creando dashboard vacío');
       return getOrCreateEmptyDashboard(email);
