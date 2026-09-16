@@ -42,6 +42,7 @@ function normalizePlanRow(plan) {
     edad: plan.edad ?? null,
     peso_kg: plan.peso_kg ?? null,
     altura_cm: plan.altura_cm ?? null,
+    sexo: plan.sexo || null,
     actividad: plan.actividad || 'moderado',
     restricciones: Array.isArray(plan.restricciones) ? plan.restricciones : [],
     calorias_objetivo: plan.calorias_objetivo ?? null,
@@ -56,6 +57,13 @@ function normalizePlanRow(plan) {
     created_at: plan.created_at || null,
     updated_at: plan.updated_at || null
   };
+}
+
+// Solo 'mujer' | 'hombre' son válidos; cualquier otro valor se guarda como null
+// (el cálculo de calorías/macros usa entonces una constante media, menos precisa).
+function normalizeSexo(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return ['mujer', 'hombre'].includes(normalized) ? normalized : null;
 }
 
 async function callPlanRpc(functionName, params = {}) {
@@ -78,7 +86,10 @@ async function callPlanRpc(functionName, params = {}) {
     const result = await response.json().catch(() => null);
 
     if (!response.ok) {
-      return { data: null, error: { code: response.status, message: result?.message || response.statusText } };
+      // PostgREST devuelve el código SQLSTATE real en el body (p. ej. '42501'
+      // permisos, '22004' datos obligatorios ausentes). Preservarlo para que
+      // los callers puedan reaccionar a errores concretos.
+      return { data: null, error: { code: result?.code ? String(result.code) : String(response.status), message: result?.message || response.statusText } };
     }
 
     return { data: result, error: null };
@@ -180,6 +191,7 @@ export async function createNutritionalPlan(payload = {}) {
     p_edad: payload.edad ?? null,
     p_peso_kg: payload.peso_kg ?? null,
     p_altura_cm: payload.altura_cm ?? null,
+    p_sexo: normalizeSexo(payload.sexo),
     p_actividad: payload.actividad || 'moderado',
     p_restricciones: Array.isArray(payload.restricciones) ? payload.restricciones : [],
     p_calorias_objetivo: payload.calorias_objetivo ?? null,
@@ -219,6 +231,7 @@ export async function updateNutritionalPlan(planId, updates = {}) {
     ...(updatableFields.edad !== undefined && updatableFields.edad !== null ? { p_edad: Number(updatableFields.edad) } : {}),
     ...(updatableFields.peso_kg !== undefined && updatableFields.peso_kg !== null ? { p_peso_kg: Number(updatableFields.peso_kg) } : {}),
     ...(updatableFields.altura_cm !== undefined && updatableFields.altura_cm !== null ? { p_altura_cm: Number(updatableFields.altura_cm) } : {}),
+    ...(updatableFields.sexo !== undefined ? { p_sexo: normalizeSexo(updatableFields.sexo) } : {}),
     ...(updatableFields.actividad ? { p_actividad: updatableFields.actividad } : {}),
     ...(updatableFields.restricciones ? { p_restricciones: updatableFields.restricciones } : {}),
     ...(updatableFields.calorias_objetivo !== undefined && updatableFields.calorias_objetivo !== null ? { p_calorias_objetivo: Number(updatableFields.calorias_objetivo) } : {}),
@@ -240,6 +253,33 @@ export async function updateNutritionalPlan(planId, updates = {}) {
   const next = normalizePlanRow(updated || { ...getNutritionalPlan(planId), ...updates, id: planId });
   const merged = [next, ...plansCache.filter(plan => String(plan.id) !== String(planId))];
   cachePlans(merged);
+
+  return { ok: true, plan: next };
+}
+
+/**
+ * Calcula calorías y macros objetivo (Mifflin-St Jeor + actividad + objetivo)
+ * en el backend y los guarda directamente sobre el plan indicado.
+ * Requiere que el plan tenga edad, peso y altura guardados.
+ * error.code '22004' → faltan esos datos; '42501' → el plan no es del usuario.
+ */
+export async function calcularYActualizarPlan(planId) {
+  if (!planId) {
+    return { ok: false, error: { code: '400', message: 'Falta planId' } };
+  }
+
+  const { data, error } = await callPlanRpc('app_calcular_y_actualizar_plan', { p_plan_id: planId });
+
+  if (error) {
+    return { ok: false, error };
+  }
+
+  const updated = Array.isArray(data) ? data[0] : data;
+  const next = normalizePlanRow(updated || getNutritionalPlan(planId));
+  if (next) {
+    const merged = [next, ...plansCache.filter(plan => String(plan.id) !== String(planId))];
+    cachePlans(merged);
+  }
 
   return { ok: true, plan: next };
 }
