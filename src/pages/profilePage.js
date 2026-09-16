@@ -12,8 +12,9 @@ import { getIcon } from '../components/icons.js';
 
 /**
  * Renderizar página de perfil
+ * @param {string} initialTab - Pestaña a abrir al entrar (data-tab): 'personal' | 'objetivos' | 'analitica' | ...
  */
-export function renderProfilePage() {
+export function renderProfilePage(initialTab = 'personal') {
   const mainContent = document.querySelector('main');
   if (!mainContent) {
     console.warn('⚠️ No se encontró elemento <main>');
@@ -280,17 +281,23 @@ export function renderProfilePage() {
   mainContent.appendChild(container);
 
   // Inicializar funcionalidad
-  initializeProfilePage();
+  initializeProfilePage(initialTab);
 }
 
 /**
  * Inicializar página de perfil
  */
-function initializeProfilePage() {
+function initializeProfilePage(initialTab = 'personal') {
   setupTabs();
   loadProfileData();
   initializeAnaliticaSection();
   setupEventListeners();
+
+  // Abrir directamente la pestaña solicitada reutilizando la lógica de
+  // setupTabs() (clases active + carga lazy de datos de cada pestaña).
+  if (initialTab && initialTab !== 'personal') {
+    document.querySelector(`.profile-tab[data-tab="${initialTab}"]`)?.click();
+  }
 }
 
 /**

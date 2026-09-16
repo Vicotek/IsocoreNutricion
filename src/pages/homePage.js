@@ -1531,10 +1531,11 @@ window.homePage_navigateToDiabetes = () => {
 
 /**
  * Navegar al perfil del usuario
+ * @param {string} initialTab - Pestaña inicial del perfil ('personal' por defecto)
  */
-window.homePage_navigateToProfile = () => {
-  console.log('👤 Navegando a Perfil');
-  ProfilePage.renderProfilePage();
+window.homePage_navigateToProfile = (initialTab = 'personal') => {
+  console.log(`👤 Navegando a Perfil (tab: ${initialTab})`);
+  ProfilePage.renderProfilePage(initialTab);
 };
 
 /**
@@ -1913,6 +1914,10 @@ function initHomeInteractions(t) {
         switch (moduleName) {
           case 'resources':
             window.homePage_navigateToArticles();
+            return;
+          case 'plan':
+            // "My Plan" vive en Perfil > Objetivos (formulario de plan nutricional)
+            window.homePage_navigateToProfile('objetivos');
             return;
           // Aquí se pueden agregar más módulos con navegación especial
           default:
