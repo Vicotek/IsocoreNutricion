@@ -472,7 +472,7 @@ async function renderPersonalPlanBuilder() {
       ${isEditMode ? `
       <div class="form-group">
         <button type="button" class="btn btn-secondary" id="calculatePlanMacrosBtn">${getIcon('target', 16)} Calcular calorías y macros</button>
-        <small style="display:block; margin-top:4px; font-size:12px; color:#6b7280;">Cálculo automático (Mifflin-St Jeor) a partir de edad, peso, altura, actividad y objetivo guardados. Los valores calculados se guardan en tu plan y puedes seguir ajustándolos a mano después.</small>
+        <small style="display:block; margin-top:4px; font-size:12px; color:#6b7280;">Guarda lo que ves en pantalla y calcula calorías/macros automáticamente (Mifflin-St Jeor) a partir de objetivo, edad, peso, altura y actividad. Los valores calculados quedan guardados en tu plan y puedes seguir ajustándolos a mano después.</small>
       </div>
       ` : ''}
 
@@ -526,28 +526,34 @@ async function renderPersonalPlanBuilder() {
     });
   }
 
+  // Recoge el estado actual completo del formulario (incluye cambios aún no
+  // guardados). Usado tanto por "Guardar cambios" como por "Calcular".
+  function collectPlanPayload() {
+    return {
+      objetivo: document.getElementById('planObjetivo').value,
+      edad: document.getElementById('planEdad').value ? Number(document.getElementById('planEdad').value) : null,
+      peso_kg: document.getElementById('planPesoKg').value ? Number(document.getElementById('planPesoKg').value) : null,
+      altura_cm: document.getElementById('planAlturaCm').value ? Number(document.getElementById('planAlturaCm').value) : null,
+      sexo: document.getElementById('planSexo').value || null,
+      actividad: document.getElementById('planActividad').value,
+      restricciones: Array.from(document.querySelectorAll('input[name="planRestriction"]:checked')).map((checkbox) => checkbox.value),
+      calorias_objetivo: document.getElementById('planCalorias').value ? Number(document.getElementById('planCalorias').value) : null,
+      proteina_objetivo_g: document.getElementById('planProteina').value ? Number(document.getElementById('planProteina').value) : null,
+      carbos_objetivo_g: document.getElementById('planCarbos').value ? Number(document.getElementById('planCarbos').value) : null,
+      grasas_objetivo_g: document.getElementById('planGrasas').value ? Number(document.getElementById('planGrasas').value) : null,
+      plan_generado: document.getElementById('planGenerado').value || null,
+      condicion_principal: document.getElementById('planCondicion').value || null,
+      observaciones: document.getElementById('planObservaciones').value || null,
+      profesional: document.getElementById('planProfesional').value || null
+    };
+  }
+
   const form = document.getElementById('personalPlanForm');
   if (form) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
 
-      const payload = {
-        objetivo: document.getElementById('planObjetivo').value,
-        edad: document.getElementById('planEdad').value ? Number(document.getElementById('planEdad').value) : null,
-        peso_kg: document.getElementById('planPesoKg').value ? Number(document.getElementById('planPesoKg').value) : null,
-        altura_cm: document.getElementById('planAlturaCm').value ? Number(document.getElementById('planAlturaCm').value) : null,
-        sexo: document.getElementById('planSexo').value || null,
-        actividad: document.getElementById('planActividad').value,
-        restricciones: Array.from(document.querySelectorAll('input[name="planRestriction"]:checked')).map((checkbox) => checkbox.value),
-        calorias_objetivo: document.getElementById('planCalorias').value ? Number(document.getElementById('planCalorias').value) : null,
-        proteina_objetivo_g: document.getElementById('planProteina').value ? Number(document.getElementById('planProteina').value) : null,
-        carbos_objetivo_g: document.getElementById('planCarbos').value ? Number(document.getElementById('planCarbos').value) : null,
-        grasas_objetivo_g: document.getElementById('planGrasas').value ? Number(document.getElementById('planGrasas').value) : null,
-        plan_generado: document.getElementById('planGenerado').value || null,
-        condicion_principal: document.getElementById('planCondicion').value || null,
-        observaciones: document.getElementById('planObservaciones').value || null,
-        profesional: document.getElementById('planProfesional').value || null
-      };
+      const payload = collectPlanPayload();
 
       const result = plan && plan.id
         ? await NutritionalPlansService.updateNutritionalPlan(plan.id, payload)
@@ -569,21 +575,42 @@ async function renderPersonalPlanBuilder() {
   const calculateBtn = document.getElementById('calculatePlanMacrosBtn');
   if (calculateBtn && plan && plan.id) {
     calculateBtn.addEventListener('click', async () => {
-      // Aviso no bloqueante: sin sexo guardado el cálculo usa una constante
-      // media entre ambas fórmulas y es menos preciso (nunca falla por esto).
-      if (!plan.sexo) {
-        const proceed = window.confirm('Este plan no tiene el sexo biológico indicado, por lo que el cálculo será una estimación aproximada. ¿Quieres continuar igualmente?');
+      // El cálculo (app_calcular_y_actualizar_plan) lee los datos guardados en
+      // la fila de planes_nutricionales, no recibe parámetros. Por eso hay que
+      // guardar primero el estado actual del formulario — si el usuario cambió
+      // objetivo/peso/etc. sin pulsar "Guardar", calcular sobre la fila vieja
+      // daría valores incoherentes con lo que ve en pantalla.
+      const payload = collectPlanPayload();
+
+      // Aviso no bloqueante: sin sexo el cálculo usa una constante media entre
+      // ambas fórmulas y es menos preciso (nunca falla por esto).
+      const sexoSeleccionado = payload.sexo || plan.sexo || null;
+      if (!sexoSeleccionado) {
+        const proceed = window.confirm('No has indicado el sexo biológico, por lo que el cálculo será una estimación aproximada. ¿Quieres continuar igualmente?');
         if (!proceed) return;
       }
 
       calculateBtn.disabled = true;
+
+      // Paso 1: guardar el estado actual del formulario.
+      const saveResult = await NutritionalPlansService.updateNutritionalPlan(plan.id, payload);
+      if (!saveResult.ok) {
+        calculateBtn.disabled = false;
+        const message = saveResult.error?.code === '42501'
+          ? 'Tu sesión no tiene permisos sobre este plan. Vuelve a iniciar sesión.'
+          : 'No se pudieron guardar los datos del formulario antes de calcular. Revisa la consola.';
+        alert(message);
+        return;
+      }
+
+      // Paso 2: calcular sobre los datos recién guardados.
       const result = await NutritionalPlansService.calcularYActualizarPlan(plan.id);
       calculateBtn.disabled = false;
 
       if (!result.ok) {
         const code = String(result.error?.code || '');
         const message = code === '22004'
-          ? 'Faltan datos para el cálculo: completa y guarda edad, peso y altura del plan primero.'
+          ? 'Faltan datos para el cálculo: completa edad, peso y altura del plan primero.'
           : code === '42501'
             ? 'Tu sesión no tiene permisos sobre este plan. Vuelve a iniciar sesión.'
             : 'No se pudo calcular el plan. Revisa la consola.';
@@ -591,14 +618,11 @@ async function renderPersonalPlanBuilder() {
         return;
       }
 
-      // La función ya guardó los valores en backend: solo refrescamos los
-      // campos en pantalla, sin re-render (para no perder otros cambios sin guardar).
-      const updated = result.plan || {};
-      document.getElementById('planCalorias').value = updated.calorias_objetivo ?? '';
-      document.getElementById('planProteina').value = updated.proteina_objetivo_g ?? '';
-      document.getElementById('planCarbos').value = updated.carbos_objetivo_g ?? '';
-      document.getElementById('planGrasas').value = updated.grasas_objetivo_g ?? '';
+      // Refrescar el formulario completo con el resultado final: incluye tanto
+      // los campos editados como las calorías/macros recién calculados.
+      await renderPersonalPlanBuilder();
 
+      const updated = result.plan || {};
       alert(`Cálculo aplicado y guardado: ${updated.calorias_objetivo ?? '-'} kcal · Proteína ${updated.proteina_objetivo_g ?? '-'} g · Carbos ${updated.carbos_objetivo_g ?? '-'} g · Grasas ${updated.grasas_objetivo_g ?? '-'} g.`);
     });
   }
