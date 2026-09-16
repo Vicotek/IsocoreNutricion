@@ -46,6 +46,9 @@ function normalizePlanRow(plan) {
     actividad: plan.actividad || 'moderado',
     restricciones: Array.isArray(plan.restricciones) ? plan.restricciones : [],
     calorias_objetivo: plan.calorias_objetivo ?? null,
+    // Transitorio: solo llega si app_calcular_y_actualizar_plan lo devuelve;
+    // no se asume que la tabla lo persista (verificar en backend).
+    calorias_mantenimiento: plan.calorias_mantenimiento ?? null,
     proteina_objetivo_g: plan.proteina_objetivo_g ?? null,
     carbos_objetivo_g: plan.carbos_objetivo_g ?? null,
     grasas_objetivo_g: plan.grasas_objetivo_g ?? null,

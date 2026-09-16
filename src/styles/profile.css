@@ -844,3 +844,40 @@
     font-size: 0.95rem;
   }
 }
+
+/* Panel de contexto del plan nutricional (porcentajes, mantenimiento, raciones) */
+.plan-macros-context {
+  margin: 12px 0 4px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.plan-context-main {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.plan-context-macros {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.7;
+}
+
+.plan-context-ration {
+  display: inline;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.plan-context-disclaimer {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: #9ca3af;
+}

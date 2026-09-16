@@ -372,12 +372,73 @@ function syncGoalCardSelection(selectedValue) {
   }
 }
 
+// Referencias fijas para la equivalencia en raciones (aproximadas por diseño).
+const RACION_PROTEINA_G = 20; // g de proteína por ración de alimento proteico (carne, pescado, huevos, legumbres)
+const RACION_CARBOS_G = 20;   // g de carbohidratos por ración de cereal, legumbre o tubérculo
+const RACION_GRASAS_G = 10;   // g de grasa por ración de grasa (aceite, frutos secos)
+
+function formatKcal(value) {
+  return Number(value).toLocaleString('es-ES');
+}
+
+/**
+ * Panel de contexto visual del plan: % de cada macro sobre las kcal totales,
+ * comparativa con el mantenimiento (transitorio, solo tras calcular) y
+ * equivalencia aproximada en raciones. Solo se muestra si hay datos calculados.
+ */
+function buildPlanMacrosContextHTML(plan, mantenimientoContext = null) {
+  const kcalObjetivo = plan?.calorias_objetivo;
+  const proteinaG = plan?.proteina_objetivo_g;
+  const carbosG = plan?.carbos_objetivo_g;
+  const grasasG = plan?.grasas_objetivo_g;
+
+  if (!plan || !kcalObjetivo || proteinaG == null || carbosG == null || grasasG == null) {
+    return '';
+  }
+
+  const pctProteina = Math.round(((proteinaG * 4) / kcalObjetivo) * 100);
+  const pctCarbos = Math.round(((carbosG * 4) / kcalObjetivo) * 100);
+  const pctGrasas = Math.round(((grasasG * 9) / kcalObjetivo) * 100);
+
+  const racionesProteina = Math.round(proteinaG / RACION_PROTEINA_G);
+  const racionesCarbos = Math.round(carbosG / RACION_CARBOS_G);
+  const racionesGrasas = Math.round(grasasG / RACION_GRASAS_G);
+
+  let mantenimientoHTML = '';
+  const mantenimiento = mantenimientoContext ?? plan.calorias_mantenimiento ?? null;
+  if (mantenimiento) {
+    const pctDiferencia = Math.round(((kcalObjetivo - mantenimiento) / mantenimiento) * 100);
+    const comparativa = pctDiferencia < 0
+      ? `${Math.abs(pctDiferencia)}% por debajo de tu mantenimiento estimado (${formatKcal(mantenimiento)} kcal)`
+      : pctDiferencia > 0
+        ? `${pctDiferencia}% por encima de tu mantenimiento estimado (${formatKcal(mantenimiento)} kcal)`
+        : `= tu mantenimiento estimado (${formatKcal(mantenimiento)} kcal)`;
+    mantenimientoHTML = `<p class="plan-context-main">${formatKcal(kcalObjetivo)} kcal/día — ${comparativa}</p>`;
+  }
+
+  return `
+    <div class="plan-macros-context">
+      ${mantenimientoHTML}
+      <ul class="plan-context-macros">
+        <li><strong>Proteína:</strong> ${proteinaG}g (${pctProteina}%) <span class="plan-context-ration">≈ ${racionesProteina} raciones/día de alimento proteico (carne, pescado, huevos, legumbres)</span></li>
+        <li><strong>Carbohidratos:</strong> ${carbosG}g (${pctCarbos}%) <span class="plan-context-ration">≈ ${racionesCarbos} raciones/día de cereal, legumbre o tubérculo</span></li>
+        <li><strong>Grasas:</strong> ${grasasG}g (${pctGrasas}%) <span class="plan-context-ration">≈ ${racionesGrasas} raciones/día de grasa (aceite, frutos secos)</span></li>
+      </ul>
+      <p class="plan-context-disclaimer">Estimación orientativa — no sustituye una tabla de composición nutricional exacta.</p>
+    </div>
+  `;
+}
+
 async function renderPersonalPlanBuilder() {
   const container = document.getElementById('personalPlanBuilder');
   if (!container) return;
 
   const plans = await NutritionalPlansService.loadMyPlans();
   const plan = plans[0] || null;
+  // Transitorio: mantenimiento devuelto por el último cálculo (no se asume
+  // persistido en la tabla). Dura hasta la próxima recarga de planes.
+  const mantenimientoContext = window.__lastPlanMantenimiento || null;
+  window.__lastPlanMantenimiento = null;
   const objectiveOptions = NutritionalPlansService.getPlanObjectiveOptions();
   const activityOptions = NutritionalPlansService.getActivityOptions();
   const restrictionOptions = NutritionalPlansService.getRestrictionOptions();
@@ -468,6 +529,8 @@ async function renderPersonalPlanBuilder() {
           <input type="number" id="planGrasas" class="form-input" value="${plan?.grasas_objetivo_g ?? ''}" placeholder="60" />
         </div>
       </div>
+
+      ${buildPlanMacrosContextHTML(plan, mantenimientoContext)}
 
       ${isEditMode ? `
       <div class="form-group">
@@ -620,6 +683,9 @@ async function renderPersonalPlanBuilder() {
 
       // Refrescar el formulario completo con el resultado final: incluye tanto
       // los campos editados como las calorías/macros recién calculados.
+      // Pasamos el mantenimiento (transitorio, si el RPC lo devuelve) para que
+      // el panel de contexto pueda mostrar la comparativa una vez.
+      window.__lastPlanMantenimiento = result.plan?.calorias_mantenimiento ?? null;
       await renderPersonalPlanBuilder();
 
       const updated = result.plan || {};
