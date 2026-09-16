@@ -619,11 +619,13 @@ function normalizeRecipeRow(row, language = 'es') {
     category: row.categoria,
     meal_type: row.tipo_comida,
     tier: row.nivel_acceso === 'gratis' ? 'free' : row.nivel_acceso,
-    calories: row.calorias ?? row.kcal,
-    protein: row.proteina_g ?? row.proteinas,
-    carbs: row.carbos_g ?? row.carbohidratos,
-    fat: row.grasas_g ?? row.grasas,
-    prep_time: row.tiempo_preparacion ?? row.tiempo_min,
+    // Columnas únicas tras la limpieza del esquema (se eliminaron las
+    // duplicadas kcal/proteinas/carbohidratos/grasas/tiempo_preparacion).
+    calories: row.calorias,
+    protein: row.proteina_g,
+    carbs: row.carbos_g,
+    fat: row.grasas_g,
+    prep_time: row.tiempo_min,
     difficulty: row.dificultad,
     ingredients: row.ingredientes,
     steps: row.pasos,
