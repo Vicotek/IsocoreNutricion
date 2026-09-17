@@ -7,6 +7,7 @@ import * as ProfileService from '../services/profileService.js';
 import * as FavoritesService from '../services/favoritesService.js';
 import * as NutritionalPlansService from '../services/nutritionalPlansService.js';
 import * as AnaliticaService from '../services/analiticaService.js';
+import * as MenuSemanalService from '../services/menuSemanalService.js';
 import { API_URL, AUTH_HEADER } from '../services/supabaseClient.js';
 import { getIcon } from '../components/icons.js';
 
@@ -40,6 +41,7 @@ export function renderProfilePage(initialTab = 'personal') {
       <div class="profile-tabs">
         <button class="profile-tab active" data-tab="personal">${getIcon('user', 16)} Personal</button>
         <button class="profile-tab" data-tab="objetivos">${getIcon('target', 16)} Objetivos</button>
+        <button class="profile-tab" data-tab="menuSemanal">${getIcon('leaf', 16)} Menú Semanal</button>
         <button class="profile-tab" data-tab="analitica">${getIcon('flask', 16)} Mi Analítica</button>
         <button class="profile-tab" data-tab="favoritos">${getIcon('heart', 16)} Favoritos</button>
         <button class="profile-tab" data-tab="historial">${getIcon('clock', 16)} Historial</button>
@@ -127,6 +129,17 @@ export function renderProfilePage(initialTab = 'personal') {
           <div class="profile-section">
             <h2>Tu Actividad</h2>
             <div class="stats-grid" id="statsDisplay"></div>
+          </div>
+        </div>
+
+        <!-- TAB: Menú Semanal -->
+        <div class="profile-tab-content" id="tab-menuSemanal">
+          <div class="profile-section">
+            <h2>Mi Menú Semanal</h2>
+            <p class="section-description">Menú de 7 días generado con recetas reales de la biblioteca, ajustado a tus calorías objetivo y respetando siempre tus restricciones alimentarias.</p>
+            <div id="weeklyMenuContainer">
+              <p class="loading">Cargando menú semanal…</p>
+            </div>
           </div>
         </div>
 
@@ -325,6 +338,7 @@ function setupTabs() {
       if (tabName === 'notificaciones') loadNotifications();
       if (tabName === 'objetivos') loadStats();
       if (tabName === 'analitica') loadAnaliticaResults();
+      if (tabName === 'menuSemanal') loadWeeklyMenu();
     });
   });
 }
@@ -427,6 +441,146 @@ function buildPlanMacrosContextHTML(plan, mantenimientoContext = null) {
       <p class="plan-context-disclaimer">Estimación orientativa — no sustituye una tabla de composición nutricional exacta.</p>
     </div>
   `;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// 🍽️ MENÚ SEMANAL — generado desde recetas reales (backend determinista)
+// ═════════════════════════════════════════════════════════════════════════
+
+function escapeHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildWeeklyMenuHTML(menu) {
+  const franjaKey = (dia, tipo) => `${dia}-${tipo}`;
+  const franjaMap = new Map(menu.franjas.map((franja) => [franjaKey(franja.dia_semana, franja.tipo_comida), franja]));
+
+  const dayColumns = MenuSemanalService.MENU_DIAS.map((dia) => {
+    const slots = MenuSemanalService.MENU_TIPOS_COMIDA.map((tipo) => {
+      const franja = franjaMap.get(franjaKey(dia.value, tipo.value));
+
+      if (!franja || franja.franja_vacia) {
+        return `
+          <div class="menu-slot menu-slot-empty">
+            <span class="menu-slot-type">${tipo.label}</span>
+            <p class="menu-slot-empty-note">No encontramos ninguna receta que cumpla tus restricciones para esta franja.</p>
+          </div>`;
+      }
+
+      const kcal = franja.receta_calorias != null ? `${formatKcal(franja.receta_calorias)} kcal` : '';
+      const proteina = franja.receta_proteina != null ? ` · ${franja.receta_proteina}g proteína` : '';
+      return `
+        <div class="menu-slot">
+          <span class="menu-slot-type">${tipo.label}</span>
+          <span class="menu-slot-recipe">${escapeHTML(franja.receta_nombre)}</span>
+          <span class="menu-slot-meta">${kcal}${proteina}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="menu-day">
+        <h3 class="menu-day-title">${dia.label}</h3>
+        ${slots}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="menu-summary">
+      <p class="menu-summary-count">${menu.generadas} de ${menu.total} comidas generadas</p>
+      <div class="form-actions" style="margin-top:8px;">
+        <button type="button" class="btn btn-secondary" id="generateWeeklyMenuBtn">${getIcon('leaf', 16)} ${menu.franjas.length > 0 ? 'Regenerar menú' : 'Generar menú'}</button>
+      </div>
+      ${menu.generadas < menu.total ? '<p class="menu-summary-note">Las franjas sin receta disponible se muestran vacías: preferimos decírtelo a rellenar con algo que no cumpla tus restricciones. Si ajustas las restricciones del plan y regeneras, puede haber más cobertura.</p>' : ''}
+    </div>
+    <div class="menu-grid">${dayColumns}</div>
+  `;
+}
+
+async function renderWeeklyMenu() {
+  const container = document.getElementById('weeklyMenuContainer');
+  if (!container) return;
+
+  const plan = NutritionalPlansService.getCurrentUserPlan();
+
+  if (!plan || !plan.id) {
+    container.innerHTML = '<p class="empty">Primero crea tu plan nutricional en la pestaña Objetivos para poder generar tu menú semanal.</p>';
+    return;
+  }
+
+  if (plan.calorias_objetivo == null) {
+    container.innerHTML = `
+      <p class="empty">Tu plan todavía no tiene calorías objetivo calculadas. Calcula primero las calorías y macros en la pestaña Objetivos (botón "Calcular calorías y macros"), y después podrás generar tu menú semanal.</p>
+      <div class="form-actions" style="margin-top:8px;">
+        <button type="button" class="btn btn-secondary" id="menuGoToObjetivosBtn">${getIcon('target', 16)} Ir a Objetivos</button>
+      </div>`;
+    document.getElementById('menuGoToObjetivosBtn')?.addEventListener('click', () => {
+      document.querySelector('.profile-tab[data-tab="objetivos"]')?.click();
+    });
+    return;
+  }
+
+  // Leer el menú ya generado (no regenera). Regenerar solo es decisión del usuario.
+  const result = await MenuSemanalService.getMiMenuSemanal(plan.id);
+
+  if (!result.ok) {
+    container.innerHTML = '<p class="error">No se pudo cargar tu menú semanal. Revisa la consola.</p>';
+    return;
+  }
+
+  if (result.menu.franjas.length === 0) {
+    container.innerHTML = `
+      <div class="menu-summary">
+        <p class="menu-summary-count">Aún no tienes un menú generado para este plan.</p>
+        <div class="form-actions" style="margin-top:8px;">
+          <button type="button" class="btn btn-primary" id="generateWeeklyMenuBtn">${getIcon('leaf', 16)} Generar menú</button>
+        </div>
+      </div>`;
+    attachGenerateMenuHandler(plan);
+    return;
+  }
+
+  container.innerHTML = buildWeeklyMenuHTML(result.menu);
+  attachGenerateMenuHandler(plan);
+}
+
+function loadWeeklyMenu() {
+  renderWeeklyMenu();
+}
+
+function attachGenerateMenuHandler(plan) {
+  const generateBtn = document.getElementById('generateWeeklyMenuBtn');
+  if (!generateBtn) return;
+
+  generateBtn.addEventListener('click', async () => {
+    const container = document.getElementById('weeklyMenuContainer');
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generando…';
+
+    const result = await MenuSemanalService.generarMenuSemanal(plan.id);
+
+    if (!result.ok) {
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generar menú';
+      const code = String(result.error?.code || '');
+      const message = code === '22004'
+        ? 'Tu plan todavía no tiene calorías objetivo calculadas. Usa primero "Calcular calorías y macros" en la pestaña Objetivos.'
+        : code === '42501'
+          ? 'Tu sesión no tiene permisos sobre este plan. Vuelve a iniciar sesión.'
+          : 'No se pudo generar el menú semanal. Revisa la consola.';
+      alert(message);
+      return;
+    }
+
+    if (container) {
+      container.innerHTML = buildWeeklyMenuHTML(result.menu);
+    }
+    attachGenerateMenuHandler(plan);
+  });
 }
 
 async function renderPersonalPlanBuilder() {

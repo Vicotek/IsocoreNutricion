@@ -881,3 +881,84 @@
   font-style: italic;
   color: #9ca3af;
 }
+
+/* Menú semanal (Perfil > Menú Semanal) */
+.menu-summary {
+  margin-bottom: 16px;
+}
+
+.menu-summary-count {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.menu-summary-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.menu-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-day-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.menu-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.menu-slot-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.menu-slot-recipe {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.35;
+}
+
+.menu-slot-meta {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.menu-slot-empty {
+  background: #f9fafb;
+  border-style: dashed;
+}
+
+.menu-slot-empty-note {
+  margin: 0;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.45;
+}
