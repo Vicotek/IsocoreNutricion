@@ -5,7 +5,7 @@
  *
  * Contrato del webhook:
  *   POST { sesion_token, plan_id, conversation_id, mensaje }
- *   ←  { conversation_id, respuesta }
+ *   ←  { id, conversation_id, rol, contenido, created_at }  (fila guardada en BD)
  *
  * conversation_id se mantiene solo en memoria (v1): cada vez que se entra a
  * la pantalla se empieza una conversación nueva (primer mensaje con
@@ -129,10 +129,12 @@ export async function sendSmartCenterMessage(mensaje) {
   const raw = await response.json().catch(() => null);
   // n8n a veces devuelve el resultado envuelto en un array de un elemento
   const result = Array.isArray(raw) ? raw[0] : raw;
-  const respuesta = typeof result?.respuesta === 'string' ? result.respuesta.trim() : '';
+  // El webhook devuelve directamente la fila guardada en BD:
+  // { id, conversation_id, rol, contenido, created_at }
+  const contenido = typeof result?.contenido === 'string' ? result.contenido.trim() : '';
 
-  if (!respuesta) {
-    console.error('❌ Smart Center: respuesta sin campo "respuesta":', raw);
+  if (!contenido) {
+    console.error('❌ Smart Center: respuesta sin campo "contenido":', raw);
     return { success: false, error: 'empty_response' };
   }
 
@@ -141,5 +143,5 @@ export async function sendSmartCenterMessage(mensaje) {
   }
 
   console.log(`✅ Smart Center ← respuesta (conversation_id: ${currentConversationId})`);
-  return { success: true, answer: respuesta, conversationId: currentConversationId };
+  return { success: true, answer: contenido, conversationId: currentConversationId };
 }
