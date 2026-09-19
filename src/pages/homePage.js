@@ -29,6 +29,7 @@ import * as ProfilePage from './profilePage.js';
 import * as AIPage from './aiPage.js';
 import * as AdminPage from './adminPage.js';
 import * as DiabetesPage from './diabetesPage.js';
+import * as SmartCenterPage from './smartCenterPage.js';
 
 const STORAGE_KEY = 'isocore_home_user';
 const BACKEND_BASE_URL = 'https://n8n.srv1569124.hstgr.cloud/webhook';
@@ -1547,6 +1548,14 @@ window.homePage_navigateToAI = () => {
 };
 
 /**
+ * Navegar al Smart Center (chat IA sobre el plan nutricional)
+ */
+window.homePage_navigateToSmartCenter = () => {
+  console.log('🧠 Navegando a Smart Center');
+  SmartCenterPage.renderSmartCenterPage();
+};
+
+/**
  * Navegar a Administración
  * ✅ VALIDAR PERMISOS - Solo admin puede acceder
  */
@@ -1918,6 +1927,10 @@ function initHomeInteractions(t) {
           case 'plan':
             // "My Plan" vive en Perfil > Objetivos (formulario de plan nutricional)
             window.homePage_navigateToProfile('objetivos');
+            return;
+          case 'center':
+            // "Smart Center" abre el chat con el agente IA (n8n)
+            window.homePage_navigateToSmartCenter();
             return;
           // Aquí se pueden agregar más módulos con navegación especial
           default:

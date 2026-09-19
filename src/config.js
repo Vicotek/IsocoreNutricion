@@ -13,6 +13,10 @@ window.APP_CONFIG = {
   API_BASE_URL: 'https://n8n.srv1569124.hstgr.cloud/webhook',
   BACKEND_BASE_URL: 'https://n8n.srv1569124.hstgr.cloud/webhook',
 
+  // Webhook del agente Smart Center (chat IA sobre el plan nutricional).
+  // URL de producción: /webhook/ (sin -test). Requiere el workflow ACTIVO en n8n.
+  SMART_CENTER_CHAT_URL: 'https://n8n.srv1569124.hstgr.cloud/webhook/smart-center-chat',
+
   // ── Supabase Configuration ─────────────────────────────────────────
   // (Si es necesario en el futuro)
   SUPABASE_URL: 'https://dhvouecsvhcxxzputvvq.supabase.co',
