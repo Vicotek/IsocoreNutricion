@@ -61,7 +61,7 @@ export async function loadCasosParaRevision(containerId = 'diabetesRevisionList'
 
   container.innerHTML = '<p class="loading">Cargando casos...</p>';
 
-  const casos = await AdminDiabetesService.listarCasosParaRevision('en_revision');
+  const casos = await AdminDiabetesService.listarCasosParaRevision();
 
   if (!casos || casos.length === 0) {
     container.innerHTML = '<p class="empty">No hay casos pendientes de revisión</p>';

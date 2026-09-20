@@ -16,11 +16,11 @@ import { getAuthToken } from './authService.js';
 const BACKEND_BASE_URL = 'https://n8n.srv1569124.hstgr.cloud/webhook';
 
 const ENDPOINTS = {
-  listarCasos: `${BACKEND_BASE_URL}/diabetes/revision/listar-casos`,
-  obtenerCaso: `${BACKEND_BASE_URL}/diabetes/revision/obtener-caso`,
-  guardarCambios: `${BACKEND_BASE_URL}/diabetes/revision/guardar-cambios`,
-  aprobar: `${BACKEND_BASE_URL}/diabetes/revision/aprobar`,
-  rechazar: `${BACKEND_BASE_URL}/diabetes/revision/rechazar`
+  listarCasos: `${BACKEND_BASE_URL}/revision-listar-casos`,
+  obtenerCaso: `${BACKEND_BASE_URL}/revision-obtener-caso`,
+  guardarCambios: `${BACKEND_BASE_URL}/revision-guardar-cambios`,
+  aprobar: `${BACKEND_BASE_URL}/revision-aprobar`,
+  rechazar: `${BACKEND_BASE_URL}/revision-rechazar`
 };
 
 async function postToWebhook(url, payload) {
@@ -46,11 +46,12 @@ async function postToWebhook(url, payload) {
  * No estaba en la lista original de funciones — la añado porque sin una
  * forma de listar casos, la pantalla de revisión no tiene manera de saber
  * qué planId abrir. Webhook nuevo a crear: wf-revision-listar-casos.
- * @param {string} estado - filtro opcional ('en_revision', 'generado_ia', ...)
+ * @param {string|null} [estado] - filtro opcional ('en_revision', 'generado_ia', ...);
+ *   si es null el backend devuelve los casos pendientes (generado_ia y en_revision).
  */
-export async function listarCasosParaRevision(estado = 'en_revision') {
+export async function listarCasosParaRevision(estado = null) {
   const data = await postToWebhook(ENDPOINTS.listarCasos, { estado });
-  return data || [];
+  return Array.isArray(data) ? data : (data?.casos || []);
 }
 
 /**

@@ -21,17 +21,18 @@ import { getAuthToken } from './authService.js';
 const BACKEND_BASE_URL = 'https://n8n.srv1569124.hstgr.cloud/webhook';
 
 const ENDPOINTS = {
-  datosPersonalesGet: `${BACKEND_BASE_URL}/diabetes/datos-personales/get`,
-  datosPersonalesGuardar: `${BACKEND_BASE_URL}/diabetes/datos-personales/guardar`,
-  historialGet: `${BACKEND_BASE_URL}/diabetes/historial-medico/get`,
-  historialGuardar: `${BACKEND_BASE_URL}/diabetes/historial-medico/guardar`,
-  habitosGet: `${BACKEND_BASE_URL}/diabetes/habitos/get`,
-  habitosGuardar: `${BACKEND_BASE_URL}/diabetes/habitos/guardar`,
-  planesListar: `${BACKEND_BASE_URL}/diabetes/planes/listar`,
-  planUltimo: `${BACKEND_BASE_URL}/diabetes/planes/ultimo`,
-  seguimientoGet: `${BACKEND_BASE_URL}/diabetes/seguimiento/get`,
-  seguimientoGuardar: `${BACKEND_BASE_URL}/diabetes/seguimiento/guardar`,
-  documentoSubir: `${BACKEND_BASE_URL}/diabetes/documentos/subir`
+  datosPersonalesGet: `${BACKEND_BASE_URL}/diabetes-datos-personales-get`,
+  datosPersonalesGuardar: `${BACKEND_BASE_URL}/diabetes-datos-personales-guardar`,
+  historialGet: `${BACKEND_BASE_URL}/diabetes-historial-medico-get`,
+  historialGuardar: `${BACKEND_BASE_URL}/diabetes-historial-medico-guardar`,
+  habitosGet: `${BACKEND_BASE_URL}/diabetes-habitos-get`,
+  habitosGuardar: `${BACKEND_BASE_URL}/diabetes-habitos-guardar`,
+  planesListar: `${BACKEND_BASE_URL}/diabetes-planes-get`,
+  planUltimo: `${BACKEND_BASE_URL}/diabetes-ultimo-plan-get`,
+  seguimientoGet: `${BACKEND_BASE_URL}/diabetes-seguimiento-get`,
+  seguimientoGuardar: `${BACKEND_BASE_URL}/diabetes-seguimiento-guardar`,
+  documentoSubir: `${BACKEND_BASE_URL}/diabetes-documento-subir`,
+  solicitarPlan: `${BACKEND_BASE_URL}/diabetes-solicitar-plan`
 };
 
 // Cache SOLO en memoria — se pierde al recargar la página a propósito.
