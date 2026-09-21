@@ -1714,7 +1714,10 @@ function initHomeInteractions(t) {
         const isSuccess = response.ok && (data.success || data.token || data.id || data.email_confirm);
         
         if (!isSuccess) {
-          const errorMsg = data.mensaje || data.message || data.error || t.loginAuthFailed;
+          const backendError = data.mensaje || data.message || data.error || '';
+          const normalizedError = String(backendError).trim().toLowerCase();
+          const invalidCredentials = response.status === 401 || response.status === 403 || normalizedError === 'error en workflow';
+          const errorMsg = invalidCredentials ? t.loginAuthFailed : (backendError || t.loginAuthFailed);
           showLockedNotice(errorMsg);
           return;
         }
