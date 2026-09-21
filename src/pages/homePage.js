@@ -1658,6 +1658,8 @@ function initHomeInteractions(t) {
   const authTabs = Array.from(document.querySelectorAll('.auth-tab'));
   const forgotLink = document.getElementById('homeLinkForgot');
   const backLoginLink = document.getElementById('homeLinkBackLogin');
+  const passwordInput = document.getElementById('homeUserPassword');
+  const passwordToggle = document.getElementById('homeUserPasswordToggle');
 
   function setAuthTab(tab) {
     authTabs.forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
@@ -1680,6 +1682,14 @@ function initHomeInteractions(t) {
   backLoginLink?.addEventListener('click', (event) => {
     event.preventDefault();
     setAuthTab('login');
+  });
+
+  passwordToggle?.addEventListener('click', () => {
+    if (!passwordInput) return;
+    const isVisible = passwordInput.type === 'text';
+    passwordInput.type = isVisible ? 'password' : 'text';
+    passwordToggle.setAttribute('aria-label', isVisible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+    passwordToggle.setAttribute('title', isVisible ? 'Mostrar contraseña' : 'Ocultar contraseña');
   });
 
   loginForm?.addEventListener('submit', async (event) => {
@@ -2047,7 +2057,10 @@ function renderLoginPanelHTML(t) {
         </label>
         <label class="input-group">
           <span data-i18n="passwordLabel">${t.passwordLabel}</span>
-          <input id="homeUserPassword" type="password" placeholder="${t.passwordPlaceholder}" data-placeholder-i18n="passwordPlaceholder" autocomplete="current-password" />
+          <span class="password-input-wrap">
+            <input id="homeUserPassword" type="password" placeholder="${t.passwordPlaceholder}" data-placeholder-i18n="passwordPlaceholder" autocomplete="current-password" />
+            <button id="homeUserPasswordToggle" class="password-toggle" type="button" aria-label="Mostrar contraseña" title="Mostrar contraseña">${getIcon('eye', 18)}</button>
+          </span>
         </label>
         <div class="form-footer">
           <button id="homeLinkForgot" type="button" class="link-button">${t.linkForgot}</button>
