@@ -202,9 +202,22 @@ function renderPlanStatusHTML() {
         <h3 style="margin:0; color:var(--text-primary);">Tu plan actual</h3>
         <span class="diabetes-status-pill estado-${estado}">${ESTADO_LABELS[estado] || estado}</span>
       </div>
-      <p style="margin:0; color:var(--text-secondary);">${ultimoPlan.contenido_final || ultimoPlan.contenido_ia || 'Tu plan se está preparando — te avisaremos en cuanto esté listo.'}</p>
+      <p style="margin:0; color:var(--text-secondary);">${renderPlanContenidoHTML(estado)}</p>
     </div>
   `;
+}
+
+function renderPlanContenidoHTML(estado) {
+  if (estado === 'aprobado' || estado === 'enviado') {
+    return ultimoPlan.contenido_final || ultimoPlan.contenido_ia || 'Tu plan se está preparando — te avisaremos en cuanto esté listo.';
+  }
+  if (estado === 'en_revision' || estado === 'generado_ia') {
+    return 'Tu plan está siendo revisado por nuestra experta — te avisaremos en cuanto esté listo para ti.';
+  }
+  if (estado === 'rechazado') {
+    return 'Tu plan necesita algunos ajustes — pronto tendrás una versión actualizada.';
+  }
+  return 'Tu plan se está preparando — te avisaremos en cuanto esté listo.';
 }
 
 /**
@@ -239,6 +252,35 @@ function updateFormularioDisplay() {
 
   const statusEl = document.getElementById('diabetesSaveStatus');
   if (statusEl) statusEl.textContent = saveStatus;
+
+  document.getElementById('diabetesSolicitarPlanBtn')?.addEventListener('click', handleSolicitarPlan);
+}
+
+async function handleSolicitarPlan() {
+  const btn = document.getElementById('diabetesSolicitarPlanBtn');
+  const statusEl = document.getElementById('diabetesSolicitarStatus');
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = 'Solicitando tu plan…';
+
+  const usuarioId = usuarioActual.id;
+  const result = await DiabetesService.solicitarPlan(usuarioId);
+
+  if (result && result.error === 'ya_existe_plan_pendiente') {
+    if (statusEl) statusEl.textContent = 'Ya tienes un plan en curso.';
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  if (!result || !result.estado) {
+    if (statusEl) statusEl.textContent = 'No se pudo solicitar el plan. Verifica que hayas completado tu historial médico, o inténtalo de nuevo en unos minutos.';
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  // Éxito: result es el plan recién creado
+  ultimoPlan = result;
+  if (statusEl) statusEl.textContent = '';
+  renderFormShell();
 }
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -389,11 +431,31 @@ function renderStepContent(key) {
           <p style="margin:0 0 8px;">${getIcon('download', 20)} Sube tu última analítica o informe médico (opcional)</p>
           <input type="file" id="haDocumento" accept=".pdf,.jpg,.jpeg,.png" />
         </div>
+        ${renderBloqueSolicitarPlan()}
       </div>
     `;
   }
 
   return '';
+}
+
+function renderBloqueSolicitarPlan() {
+  const puedeSolicitar = !ultimoPlan || ultimoPlan.estado === 'rechazado';
+  if (!puedeSolicitar) {
+    return `
+      <div class="diabetes-field-group" style="margin-top:16px;">
+        <p style="color:var(--text-secondary); font-size:.9rem;">Ya tienes un plan en curso — revisa el estado arriba.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="diabetes-field-group" style="margin-top:16px;">
+      <button type="button" class="primary-button" id="diabetesSolicitarPlanBtn" style="width:auto; padding:12px 24px;">
+        Generar mi plan
+      </button>
+      <p class="diabetes-solicitar-status" id="diabetesSolicitarStatus" style="margin-top:8px; font-size:.85rem;"></p>
+    </div>
+  `;
 }
 
 // ═════════════════════════════════════════════════════════════════════════

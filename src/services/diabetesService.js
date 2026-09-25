@@ -164,6 +164,15 @@ export async function getUltimoPlan(usuarioId) {
   return postToWebhook(ENDPOINTS.planUltimo, { usuarioId });
 }
 
+export async function solicitarPlan(usuarioId) {
+  const result = await postToWebhook(ENDPOINTS.solicitarPlan, { usuarioId });
+  if (result && result.estado) {
+    // Se generó o quedó pendiente un plan de verdad — invalida el cache para forzar recarga
+    cache.planes = null;
+  }
+  return result;
+}
+
 // ═════════════════════════════════════════════════════════════════════════
 // Seguimiento (peso, HbA1c, adherencia — registrado por la experta)
 // ═════════════════════════════════════════════════════════════════════════
