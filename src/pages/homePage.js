@@ -1169,6 +1169,9 @@ async function renderDashboard(dashboard) {
     const cardsHTML = dashboard.cards.map(card => createCardHTML(card)).join('');
     feedEl.innerHTML = `
       <div class="dashboard-feed-block">
+        ${createDiabetesCardHTML()}
+      </div>
+      <div class="dashboard-feed-block">
         <h3 class="feed-section-title">${t.activityTitle || 'Tu actividad'}</h3>
         <div class="dashboard-cards" id="dashboardCards">
           ${cardsHTML || '<p class="feed-empty">Todavía no tienes actividad ni favoritos guardados.</p>'}
@@ -1186,6 +1189,10 @@ async function renderDashboard(dashboard) {
       </div>
     `;
     document.getElementById('dashboardAICta')?.addEventListener('click', () => window.homePage_navigateToAI());
+    if (!feedEl.dataset.feedClickBound) {
+      feedEl.addEventListener('click', handleFeedClick);
+      feedEl.dataset.feedClickBound = 'true';
+    }
     fetchRecentNews().then(renderNewsList);
   }
 
