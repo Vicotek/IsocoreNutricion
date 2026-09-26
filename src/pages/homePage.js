@@ -917,7 +917,7 @@ function createFeedCard(item, type, typeLabel, state = 'loaded') {
 
   const cta = locked
     ? `<button type="button" class="feed-card-cta feed-card-cta-locked" data-feed-unlock="${item.tier}">${getIcon('lock', 14)} ${item.tier === 'vip' ? 'Hazte VIP' : 'Desbloquear'}</button>`
-    : `<button type="button" class="feed-card-cta" data-feed-view="${type}" data-feed-id="${item.id ?? ''}">Ver más</button>`;
+    : `<button type="button" class="feed-card-cta" data-feed-view="${type}" data-feed-id="${item.id ?? ''}" data-feed-title="${escapeHtml(title)}">Ver más</button>`;
 
   return `
     <article class="feed-card ${locked ? 'feed-card-locked' : ''}" data-feed-section="${type}" data-feed-id="${item.id ?? ''}">
@@ -939,7 +939,7 @@ function createNewsItemHTML(item) {
   const date = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
   const locked = !canAccessTier(item.tier || 'free');
   return `
-    <div class="feed-news-item ${locked ? 'feed-news-item-locked' : ''}" data-feed-view="${item.feedType}" data-feed-id="${item.id ?? ''}">
+    <div class="feed-news-item ${locked ? 'feed-news-item-locked' : ''}" data-feed-view="${item.feedType}" data-feed-id="${item.id ?? ''}" data-feed-title="${escapeHtml(item.title || 'Sin título')}">
       <span class="feed-news-badge">${escapeHtml(item.feedLabel)}</span>
       <span class="feed-news-title">${escapeHtml(item.title || 'Sin título')}</span>
       ${date ? `<span class="feed-news-date">${date}</span>` : ''}
@@ -989,6 +989,22 @@ async function renderCentralFeed(language = getCurrentLanguage()) {
   renderNewsList(news);
 }
 
+/**
+ * Registra actividad reciente del usuario (para "Continuar donde lo
+ * dejaste" en el dashboard). saveActivityToSupabase ya existía pero nunca
+ * se llamaba desde ningún sitio — este es el punto de entrada real.
+ */
+function logActivity(type, resourceName, resourceId) {
+  const user = getStoredUser();
+  if (!user?.email) return;
+  DashboardService.updateRecentActivity(user.email, {
+    type,
+    resourceName: resourceName || 'Contenido',
+    resourceId: resourceId || null,
+    action: 'view'
+  }).catch((error) => console.error('Error registrando actividad:', error));
+}
+
 function handleFeedClick(event) {
   const unlockBtn = event.target.closest('[data-feed-unlock]');
   if (unlockBtn) {
@@ -999,9 +1015,14 @@ function handleFeedClick(event) {
   const viewTarget = event.target.closest('[data-feed-view]');
   if (viewTarget) {
     const type = viewTarget.dataset.feedView;
+    const title = viewTarget.dataset.feedTitle;
+    const id = viewTarget.dataset.feedId;
+
     if (type === 'article') {
+      logActivity('article', title, id);
       window.homePage_navigateToArticles();
     } else if (type === 'diabetes') {
+      logActivity('diabetes', 'Programa de nutrición para diabéticos', null);
       window.homePage_navigateToDiabetes();
     } else {
       showLockedNotice('Sección en desarrollo');
@@ -1969,24 +1990,30 @@ function initHomeInteractions(t) {
 
       // Módulos desbloqueados con navegación especial
       if (!isLocked) {
+        const moduleTitle = moduleCard?.querySelector('h4')?.textContent || moduleName;
         switch (moduleName) {
           case 'resources':
+            logActivity('resource', moduleTitle, null);
             window.homePage_navigateToArticles();
             return;
           case 'plan':
             // "My Plan" vive en Perfil > Objetivos (formulario de plan nutricional)
+            logActivity('plan', moduleTitle, null);
             window.homePage_navigateToProfile('objetivos');
             return;
           case 'center':
             // "Smart Center" abre el chat con el agente IA (n8n)
+            logActivity('center', moduleTitle, null);
             window.homePage_navigateToSmartCenter();
             return;
           case 'ai':
             // Módulo "IA" — mismo destino que el CTA de "Pregunta a tu
             // asistente nutricional" del dashboard (aiPage.js)
+            logActivity('ai', moduleTitle, null);
             window.homePage_navigateToAI();
             return;
           case 'supplements':
+            logActivity('supplement', moduleTitle, null);
             window.homePage_navigateToSupplements();
             return;
           // Aquí se pueden agregar más módulos con navegación especial

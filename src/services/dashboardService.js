@@ -7,7 +7,8 @@ import {
   getCachedUser,
   getUserFromSupabase,
   getRecentActivityFromSupabase,
-  getFavoritesFromSupabase
+  getFavoritesFromSupabase,
+  saveActivityToSupabase
 } from './supabaseClient.js';
 import { getAuthToken } from './authService.js';
 import { getIcon } from '../components/icons.js';
@@ -113,10 +114,15 @@ export async function updateRecentActivity(email, activity) {
   try {
     console.log('📝 Registrando actividad:', activity.type);
 
-    // Registrar en Supabase (implementar en supabaseClient)
-    // TODO: Crear función saveActivityToSupabase(activity)
+    // saveActivityToSupabase ya existe (llama a la RPC app_log_user_activity)
+    // — antes nunca se invocaba, así que ninguna actividad quedaba
+    // registrada y "Continuar donde lo dejaste" nunca tenía datos.
+    const saved = await saveActivityToSupabase(activity);
+    if (!saved) {
+      console.warn('⚠️ No se pudo guardar la actividad en Supabase');
+    }
 
-    // Refrescar dashboard local
+    // Refrescar dashboard local (sin bloquear si el guardado falló)
     const dashboard = await loadDashboard(email);
     if (dashboard) {
       updateDashboardUI(dashboard);
