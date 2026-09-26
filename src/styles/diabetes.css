@@ -305,74 +305,83 @@
   }
 }
 
-/* ── Plan final (aprobado/enviado) — vista de paciente ── */
+/* ── Plan final legible para el paciente (estado aprobado/enviado) ── */
 
-.plan-final {
+.plan-final-content {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .plan-final-block {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 18px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
-.plan-final-block-title {
+.plan-final-block-label {
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.plan-final-text {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.plan-final-list {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  display: grid;
-  gap: 4px;
-}
-
-.plan-final-macros,
-.plan-final-raciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.plan-final-macro-item,
-.plan-final-racion-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 120px;
-}
-
-.plan-final-macro-label,
-.plan-final-racion-label {
-  font-size: 0.7rem;
+  font-weight: 700;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
 
-.plan-final-macro-value,
-.plan-final-racion-value {
-  font-weight: 700;
+.plan-final-block p {
+  margin: 0;
   color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.plan-final-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.plan-final-macros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.plan-final-macro {
+  background: var(--surface);
+  border-radius: var(--radius-control, 12px);
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.plan-final-macro-value {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.plan-final-macro-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.plan-final-raciones {
+  display: grid;
+  gap: 6px;
+}
+
+.plan-final-racion {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--surface);
+  border-radius: var(--radius-control, 12px);
+  padding: 8px 12px;
 }
 
 .plan-final-menu {
@@ -380,49 +389,33 @@
   gap: 12px;
 }
 
-.plan-final-menu-dia {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+.plan-final-menu-day {
+  background: var(--surface);
+  border-radius: var(--radius-control, 12px);
   padding: 12px 14px;
   display: grid;
   gap: 6px;
 }
 
-.plan-final-menu-dia-title {
-  margin: 0 0 4px;
-  font-size: 0.85rem;
+.plan-final-menu-day h4 {
+  margin: 0 0 2px;
+  font-size: 0.9rem;
   color: var(--text-primary);
 }
 
 .plan-final-menu-comida {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
+  display: grid;
+  gap: 2px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
 }
 
 .plan-final-menu-comida-label {
-  flex: 0 0 auto;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--text-secondary);
-  min-width: 100px;
-}
-
-.plan-final-menu-comida-texto {
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-@media (max-width: 640px) {
-  .plan-final-menu-comida {
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .plan-final-menu-comida-label {
-    min-width: 0;
-  }
 }
 
 /* ── Revisión clínica (panel admin — reutiliza tokens, no admin.css) ── */

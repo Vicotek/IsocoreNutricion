@@ -56,35 +56,33 @@ const ESTADO_LABELS = {
   archivado: 'Archivado'
 };
 
-// Mismas claves que CAMPOS_PLAN en adminRevisionPage.js — es el contenido
-// ya revisado (o generado) por la experta, mostrado en lenguaje de paciente.
+// Campos del plan final que se muestran al paciente, en orden de lectura.
+// Deliberadamente NO incluye notas_seguridad / puntos_a_verificar / fuentes_usadas
+// — son notas internas para la experta, no contenido para el paciente.
 const CAMPOS_PLAN_PACIENTE = [
-  { key: 'resumen_clinico', label: 'Resumen de tu plan' },
+  { key: 'resumen_clinico', label: 'Resumen' },
   { key: 'objetivos_nutricionales', label: 'Objetivos nutricionales' },
-  { key: 'distribucion_macronutrientes', label: 'Distribución de macronutrientes' },
-  { key: 'distribucion_raciones_hc_por_comida', label: 'Raciones de hidratos por comida' },
-  { key: 'menu_ejemplo_3_dias', label: 'Menú de ejemplo (3 días)' },
-  { key: 'recomendaciones_timing_medicacion', label: 'Timing de medicación' },
-  { key: 'recomendaciones_ejercicio', label: 'Recomendaciones de ejercicio' }
+  { key: 'recomendaciones_timing_medicacion', label: 'Medicación y horarios' },
+  { key: 'recomendaciones_ejercicio', label: 'Ejercicio' }
 ];
 
-const DIAS_MENU_LABEL = {
-  dia_1: 'Día 1',
-  dia_2: 'Día 2',
-  dia_3: 'Día 3'
-};
-
+const DIAS_MENU_LABEL = { 1: 'Día 1', 2: 'Día 2', 3: 'Día 3' };
 const COMIDAS_MENU_LABEL = {
   desayuno: 'Desayuno',
   media_manana: 'Media mañana',
   comida: 'Comida',
   merienda: 'Merienda',
   cena: 'Cena',
-  recena: 'Recena'
+  snacks: 'Snacks'
 };
 
+/**
+ * El plan final llega como JSON serializado (contenido_final/contenido_ia
+ * es un string). Si ya llegara como objeto (o algo no parseable), se
+ * maneja sin romper — igual que adminRevisionPage.js con parseContenido().
+ */
 function parseContenidoPlan(raw) {
-  if (!raw) return {};
+  if (!raw) return null;
   if (typeof raw === 'object') return raw;
   try {
     return JSON.parse(raw);
@@ -94,111 +92,127 @@ function parseContenidoPlan(raw) {
 }
 
 function escapeHtmlPlan(value) {
-  if (value === undefined || value === null) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
 }
 
-function renderListaOTexto(value) {
-  if (value === undefined || value === null || value === '') return '';
-  if (Array.isArray(value)) {
-    return `<ul class="plan-final-list">${value.map((item) => `<li>${escapeHtmlPlan(item)}</li>`).join('')}</ul>`;
+function renderListaOTexto(valor) {
+  if (Array.isArray(valor)) {
+    if (!valor.length) return '';
+    return `<ul class="plan-final-list">${valor.map(item => `<li>${escapeHtmlPlan(item)}</li>`).join('')}</ul>`;
   }
-  if (typeof value === 'object') {
-    return `<ul class="plan-final-list">${Object.entries(value).map(([k, v]) => `<li><strong>${escapeHtmlPlan(k)}:</strong> ${escapeHtmlPlan(v)}</li>`).join('')}</ul>`;
-  }
-  return `<p class="plan-final-text">${escapeHtmlPlan(value).replace(/\n/g, '<br>')}</p>`;
+  return `<p>${escapeHtmlPlan(valor)}</p>`;
 }
 
 function renderMacrosHTML(macros) {
-  if (!macros) return '';
-  if (typeof macros !== 'object' || Array.isArray(macros)) {
-    return renderListaOTexto(macros);
-  }
+  if (!macros || typeof macros !== 'object') return '';
+  const items = [
+    { label: 'Calorías', value: macros.calorias_estimadas, suffix: ' kcal' },
+    { label: 'Hidratos', value: macros.hidratos_g, suffix: ' g' },
+    { label: 'Proteínas', value: macros.proteinas_g, suffix: ' g' },
+    { label: 'Grasas', value: macros.grasas_g, suffix: ' g' }
+  ].filter(item => item.value !== undefined && item.value !== null);
+  if (!items.length) return '';
   return `
-    <div class="plan-final-macros">
-      ${Object.entries(macros).map(([key, value]) => `
-        <div class="plan-final-macro-item">
-          <span class="plan-final-macro-label">${escapeHtmlPlan(key.replace(/_/g, ' '))}</span>
-          <span class="plan-final-macro-value">${escapeHtmlPlan(value)}</span>
-        </div>
-      `).join('')}
+    <div class="plan-final-block">
+      <p class="plan-final-block-label">Distribución diaria estimada</p>
+      <div class="plan-final-macros">
+        ${items.map(item => `
+          <div class="plan-final-macro">
+            <span class="plan-final-macro-value">${escapeHtmlPlan(item.value)}${item.suffix}</span>
+            <span class="plan-final-macro-label">${item.label}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
   `;
 }
 
 function renderRacionesHTML(raciones) {
-  if (!raciones) return '';
-  if (typeof raciones !== 'object' || Array.isArray(raciones)) {
-    return renderListaOTexto(raciones);
-  }
+  if (!raciones || typeof raciones !== 'object') return '';
+  const entradas = Object.entries(raciones).filter(([, v]) => v !== undefined && v !== null);
+  if (!entradas.length) return '';
   return `
-    <div class="plan-final-raciones">
-      ${Object.entries(raciones).map(([key, value]) => `
-        <div class="plan-final-racion-item">
-          <span class="plan-final-racion-label">${COMIDAS_MENU_LABEL[key] || escapeHtmlPlan(key.replace(/_/g, ' '))}</span>
-          <span class="plan-final-racion-value">${escapeHtmlPlan(value)}</span>
-        </div>
-      `).join('')}
+    <div class="plan-final-block">
+      <p class="plan-final-block-label">Raciones de hidratos por comida</p>
+      <div class="plan-final-raciones">
+        ${entradas.map(([key, value]) => `
+          <div class="plan-final-racion">
+            <span>${COMIDAS_MENU_LABEL[key] || key}</span>
+            <strong>${escapeHtmlPlan(value)}</strong>
+          </div>
+        `).join('')}
+      </div>
     </div>
   `;
 }
 
 function renderMenuEjemploHTML(menu) {
-  if (!menu) return '';
-  if (typeof menu !== 'object' || Array.isArray(menu)) {
-    return renderListaOTexto(menu);
-  }
+  if (!Array.isArray(menu) || !menu.length) return '';
   return `
-    <div class="plan-final-menu">
-      ${Object.entries(menu).map(([diaKey, comidas]) => `
-        <div class="plan-final-menu-dia">
-          <h4 class="plan-final-menu-dia-title">${DIAS_MENU_LABEL[diaKey] || escapeHtmlPlan(diaKey.replace(/_/g, ' '))}</h4>
-          ${typeof comidas === 'object' && comidas !== null && !Array.isArray(comidas)
-            ? Object.entries(comidas).map(([comidaKey, texto]) => `
+    <div class="plan-final-block">
+      <p class="plan-final-block-label">Menú de ejemplo</p>
+      <div class="plan-final-menu">
+        ${menu.map(dia => `
+          <div class="plan-final-menu-day">
+            <h4>${DIAS_MENU_LABEL[dia.dia] || `Día ${dia.dia ?? ''}`}</h4>
+            ${Object.entries(COMIDAS_MENU_LABEL)
+              .filter(([key]) => dia[key])
+              .map(([key, label]) => `
                 <div class="plan-final-menu-comida">
-                  <span class="plan-final-menu-comida-label">${COMIDAS_MENU_LABEL[comidaKey] || escapeHtmlPlan(comidaKey.replace(/_/g, ' '))}</span>
-                  <span class="plan-final-menu-comida-texto">${escapeHtmlPlan(texto)}</span>
+                  <span class="plan-final-menu-comida-label">${label}</span>
+                  <span>${escapeHtmlPlan(dia[key])}</span>
                 </div>
-              `).join('')
-            : `<p class="plan-final-text">${escapeHtmlPlan(comidas)}</p>`}
-        </div>
-      `).join('')}
+              `).join('')}
+          </div>
+        `).join('')}
+      </div>
     </div>
   `;
 }
 
-function renderPlanFinalHTML(rawContenido) {
-  const contenido = parseContenidoPlan(rawContenido);
+/**
+ * Render legible del plan final para el paciente — reemplaza el JSON
+ * crudo que se mostraba antes. Solo se llama cuando estado es
+ * aprobado/enviado, es decir, cuando contenido_final ya pasó por la
+ * revisión de la experta.
+ */
+function renderPlanFinalHTML(raw) {
+  const contenido = parseContenidoPlan(raw);
+  if (!contenido) {
+    return '<p style="margin:0; color:var(--text-secondary);">Tu plan se está preparando — te avisaremos en cuanto esté listo.</p>';
+  }
+
+  const bloques = CAMPOS_PLAN_PACIENTE
+    .filter(campo => contenido[campo.key])
+    .map(campo => `
+      <div class="plan-final-block">
+        <p class="plan-final-block-label">${campo.label}</p>
+        ${renderListaOTexto(contenido[campo.key])}
+      </div>
+    `);
+
+  const macros = renderMacrosHTML(contenido.distribucion_macronutrientes);
+  const raciones = renderRacionesHTML(contenido.distribucion_raciones_hc_por_comida);
+  const menu = renderMenuEjemploHTML(contenido.menu_ejemplo_3_dias);
+
+  // Orden de lectura: resumen y objetivos primero, luego macros/raciones,
+  // menú de ejemplo, y por último medicación/ejercicio.
+  const [resumenObjetivos, resto] = [bloques.slice(0, 2), bloques.slice(2)];
+
+  const todosVacios = !resumenObjetivos.length && !macros && !raciones && !menu && !resto.length;
+  if (todosVacios) {
+    return '<p style="margin:0; color:var(--text-secondary);">Tu plan se está preparando — te avisaremos en cuanto esté listo.</p>';
+  }
 
   return `
-    <div class="plan-final">
-      ${CAMPOS_PLAN_PACIENTE.map((campo) => {
-        const valor = contenido[campo.key];
-        if (valor === undefined || valor === null || valor === '') return '';
-
-        let cuerpo;
-        if (campo.key === 'distribucion_macronutrientes') {
-          cuerpo = renderMacrosHTML(valor);
-        } else if (campo.key === 'distribucion_raciones_hc_por_comida') {
-          cuerpo = renderRacionesHTML(valor);
-        } else if (campo.key === 'menu_ejemplo_3_dias') {
-          cuerpo = renderMenuEjemploHTML(valor);
-        } else {
-          cuerpo = renderListaOTexto(valor);
-        }
-
-        return `
-          <div class="plan-final-block">
-            <h3 class="plan-final-block-title">${campo.label}</h3>
-            ${cuerpo}
-          </div>
-        `;
-      }).join('')}
+    <div class="plan-final-content">
+      ${resumenObjetivos.join('')}
+      ${macros}
+      ${raciones}
+      ${menu}
+      ${resto.join('')}
     </div>
   `;
 }
@@ -343,14 +357,14 @@ function renderFormShell() {
 
 function renderPlanStatusHTML() {
   const estado = ultimoPlan.estado || 'generado_ia';
-  const esFinal = estado === 'aprobado' || estado === 'enviado';
+  const esPlanVisible = estado === 'aprobado' || estado === 'enviado';
   return `
     <div class="diabetes-plan-card">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <h3 style="margin:0; color:var(--text-primary);">Tu plan actual</h3>
         <span class="diabetes-status-pill estado-${estado}">${ESTADO_LABELS[estado] || estado}</span>
       </div>
-      ${esFinal
+      ${esPlanVisible
         ? renderPlanFinalHTML(ultimoPlan.contenido_final || ultimoPlan.contenido_ia)
         : `<p style="margin:0; color:var(--text-secondary);">${renderPlanContenidoHTML(estado)}</p>`}
     </div>
