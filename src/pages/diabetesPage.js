@@ -56,6 +56,153 @@ const ESTADO_LABELS = {
   archivado: 'Archivado'
 };
 
+// Mismas claves que CAMPOS_PLAN en adminRevisionPage.js — es el contenido
+// ya revisado (o generado) por la experta, mostrado en lenguaje de paciente.
+const CAMPOS_PLAN_PACIENTE = [
+  { key: 'resumen_clinico', label: 'Resumen de tu plan' },
+  { key: 'objetivos_nutricionales', label: 'Objetivos nutricionales' },
+  { key: 'distribucion_macronutrientes', label: 'Distribución de macronutrientes' },
+  { key: 'distribucion_raciones_hc_por_comida', label: 'Raciones de hidratos por comida' },
+  { key: 'menu_ejemplo_3_dias', label: 'Menú de ejemplo (3 días)' },
+  { key: 'recomendaciones_timing_medicacion', label: 'Timing de medicación' },
+  { key: 'recomendaciones_ejercicio', label: 'Recomendaciones de ejercicio' }
+];
+
+const DIAS_MENU_LABEL = {
+  dia_1: 'Día 1',
+  dia_2: 'Día 2',
+  dia_3: 'Día 3'
+};
+
+const COMIDAS_MENU_LABEL = {
+  desayuno: 'Desayuno',
+  media_manana: 'Media mañana',
+  comida: 'Comida',
+  merienda: 'Merienda',
+  cena: 'Cena',
+  recena: 'Recena'
+};
+
+function parseContenidoPlan(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { resumen_clinico: raw };
+  }
+}
+
+function escapeHtmlPlan(value) {
+  if (value === undefined || value === null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderListaOTexto(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (Array.isArray(value)) {
+    return `<ul class="plan-final-list">${value.map((item) => `<li>${escapeHtmlPlan(item)}</li>`).join('')}</ul>`;
+  }
+  if (typeof value === 'object') {
+    return `<ul class="plan-final-list">${Object.entries(value).map(([k, v]) => `<li><strong>${escapeHtmlPlan(k)}:</strong> ${escapeHtmlPlan(v)}</li>`).join('')}</ul>`;
+  }
+  return `<p class="plan-final-text">${escapeHtmlPlan(value).replace(/\n/g, '<br>')}</p>`;
+}
+
+function renderMacrosHTML(macros) {
+  if (!macros) return '';
+  if (typeof macros !== 'object' || Array.isArray(macros)) {
+    return renderListaOTexto(macros);
+  }
+  return `
+    <div class="plan-final-macros">
+      ${Object.entries(macros).map(([key, value]) => `
+        <div class="plan-final-macro-item">
+          <span class="plan-final-macro-label">${escapeHtmlPlan(key.replace(/_/g, ' '))}</span>
+          <span class="plan-final-macro-value">${escapeHtmlPlan(value)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderRacionesHTML(raciones) {
+  if (!raciones) return '';
+  if (typeof raciones !== 'object' || Array.isArray(raciones)) {
+    return renderListaOTexto(raciones);
+  }
+  return `
+    <div class="plan-final-raciones">
+      ${Object.entries(raciones).map(([key, value]) => `
+        <div class="plan-final-racion-item">
+          <span class="plan-final-racion-label">${COMIDAS_MENU_LABEL[key] || escapeHtmlPlan(key.replace(/_/g, ' '))}</span>
+          <span class="plan-final-racion-value">${escapeHtmlPlan(value)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderMenuEjemploHTML(menu) {
+  if (!menu) return '';
+  if (typeof menu !== 'object' || Array.isArray(menu)) {
+    return renderListaOTexto(menu);
+  }
+  return `
+    <div class="plan-final-menu">
+      ${Object.entries(menu).map(([diaKey, comidas]) => `
+        <div class="plan-final-menu-dia">
+          <h4 class="plan-final-menu-dia-title">${DIAS_MENU_LABEL[diaKey] || escapeHtmlPlan(diaKey.replace(/_/g, ' '))}</h4>
+          ${typeof comidas === 'object' && comidas !== null && !Array.isArray(comidas)
+            ? Object.entries(comidas).map(([comidaKey, texto]) => `
+                <div class="plan-final-menu-comida">
+                  <span class="plan-final-menu-comida-label">${COMIDAS_MENU_LABEL[comidaKey] || escapeHtmlPlan(comidaKey.replace(/_/g, ' '))}</span>
+                  <span class="plan-final-menu-comida-texto">${escapeHtmlPlan(texto)}</span>
+                </div>
+              `).join('')
+            : `<p class="plan-final-text">${escapeHtmlPlan(comidas)}</p>`}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderPlanFinalHTML(rawContenido) {
+  const contenido = parseContenidoPlan(rawContenido);
+
+  return `
+    <div class="plan-final">
+      ${CAMPOS_PLAN_PACIENTE.map((campo) => {
+        const valor = contenido[campo.key];
+        if (valor === undefined || valor === null || valor === '') return '';
+
+        let cuerpo;
+        if (campo.key === 'distribucion_macronutrientes') {
+          cuerpo = renderMacrosHTML(valor);
+        } else if (campo.key === 'distribucion_raciones_hc_por_comida') {
+          cuerpo = renderRacionesHTML(valor);
+        } else if (campo.key === 'menu_ejemplo_3_dias') {
+          cuerpo = renderMenuEjemploHTML(valor);
+        } else {
+          cuerpo = renderListaOTexto(valor);
+        }
+
+        return `
+          <div class="plan-final-block">
+            <h3 class="plan-final-block-title">${campo.label}</h3>
+            ${cuerpo}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
 /**
  * Punto de entrada — igual patrón que renderArticlesPage/renderAIPage.
  */
@@ -196,21 +343,21 @@ function renderFormShell() {
 
 function renderPlanStatusHTML() {
   const estado = ultimoPlan.estado || 'generado_ia';
+  const esFinal = estado === 'aprobado' || estado === 'enviado';
   return `
     <div class="diabetes-plan-card">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <h3 style="margin:0; color:var(--text-primary);">Tu plan actual</h3>
         <span class="diabetes-status-pill estado-${estado}">${ESTADO_LABELS[estado] || estado}</span>
       </div>
-      <p style="margin:0; color:var(--text-secondary);">${renderPlanContenidoHTML(estado)}</p>
+      ${esFinal
+        ? renderPlanFinalHTML(ultimoPlan.contenido_final || ultimoPlan.contenido_ia)
+        : `<p style="margin:0; color:var(--text-secondary);">${renderPlanContenidoHTML(estado)}</p>`}
     </div>
   `;
 }
 
 function renderPlanContenidoHTML(estado) {
-  if (estado === 'aprobado' || estado === 'enviado') {
-    return ultimoPlan.contenido_final || ultimoPlan.contenido_ia || 'Tu plan se está preparando — te avisaremos en cuanto esté listo.';
-  }
   if (estado === 'en_revision' || estado === 'generado_ia') {
     return 'Tu plan está siendo revisado por nuestra experta — te avisaremos en cuanto esté listo para ti.';
   }

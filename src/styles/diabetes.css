@@ -305,6 +305,126 @@
   }
 }
 
+/* ── Plan final (aprobado/enviado) — vista de paciente ── */
+
+.plan-final {
+  display: grid;
+  gap: 16px;
+}
+
+.plan-final-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.plan-final-block-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.plan-final-text {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.plan-final-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: grid;
+  gap: 4px;
+}
+
+.plan-final-macros,
+.plan-final-raciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.plan-final-macro-item,
+.plan-final-racion-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+}
+
+.plan-final-macro-label,
+.plan-final-racion-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.plan-final-macro-value,
+.plan-final-racion-value {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.plan-final-menu {
+  display: grid;
+  gap: 12px;
+}
+
+.plan-final-menu-dia {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.plan-final-menu-dia-title {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.plan-final-menu-comida {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.plan-final-menu-comida-label {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-width: 100px;
+}
+
+.plan-final-menu-comida-texto {
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .plan-final-menu-comida {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .plan-final-menu-comida-label {
+    min-width: 0;
+  }
+}
+
 /* ── Revisión clínica (panel admin — reutiliza tokens, no admin.css) ── */
 
 .revision-case-item {
