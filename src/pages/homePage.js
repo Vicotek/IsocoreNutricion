@@ -1970,6 +1970,11 @@ function initHomeInteractions(t) {
             // "Smart Center" abre el chat con el agente IA (n8n)
             window.homePage_navigateToSmartCenter();
             return;
+          case 'ai':
+            // Módulo "IA" — mismo destino que el CTA de "Pregunta a tu
+            // asistente nutricional" del dashboard (aiPage.js)
+            window.homePage_navigateToAI();
+            return;
           // Aquí se pueden agregar más módulos con navegación especial
           default:
             showLockedNotice('Módulo en desarrollo');
