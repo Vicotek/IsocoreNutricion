@@ -1655,6 +1655,21 @@ function setupSearchListeners() {
   });
 }
 
+/**
+ * Los workflows de n8n a veces responden con mensajes internos genéricos
+ * (p.ej. "Error in workflow" / "Error en workflow") en vez de un motivo
+ * claro. Nunca se deben mostrar tal cual al usuario: se sustituyen por un
+ * mensaje de fallback legible.
+ */
+function friendlyBackendError(rawMessage, fallback) {
+  const normalized = String(rawMessage || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized.includes('error en workflow') || normalized.includes('error in workflow') || normalized === 'workflow error') {
+    return fallback;
+  }
+  return rawMessage;
+}
+
 function initHomeInteractions(t) {
   const loginForm = document.getElementById('homeLoginForm');
   const logoutButton = document.getElementById('homeLogoutButton');
@@ -1723,8 +1738,9 @@ function initHomeInteractions(t) {
         if (!isSuccess) {
           const backendError = data.mensaje || data.message || data.error || '';
           const normalizedError = String(backendError).trim().toLowerCase();
-          const invalidCredentials = response.status === 401 || response.status === 403 || normalizedError === 'error en workflow';
-          const errorMsg = invalidCredentials ? t.loginAuthFailed : (backendError || t.loginAuthFailed);
+          const isWorkflowError = normalizedError.includes('error en workflow') || normalizedError.includes('error in workflow');
+          const invalidCredentials = response.status === 401 || response.status === 403 || isWorkflowError;
+          const errorMsg = invalidCredentials ? t.loginAuthFailed : friendlyBackendError(backendError, t.loginAuthFailed);
           showLockedNotice(errorMsg);
           return;
         }
@@ -1842,7 +1858,8 @@ function initHomeInteractions(t) {
         const isSuccess = response.ok && (data.success || data.email_confirm || data.created || data.id);
         
         if (!isSuccess && !response.ok) {
-          const errorMsg = data.mensaje || data.message || data.error || t.loginAuthFailed;
+          const backendError = data.mensaje || data.message || data.error || '';
+          const errorMsg = friendlyBackendError(backendError, t.loginAuthFailed);
           showLockedNotice(errorMsg);
           return;
         }
@@ -1877,7 +1894,8 @@ function initHomeInteractions(t) {
         const isSuccess = response.ok && (data.success || data.email_sent || data.message || data.id);
         
         if (!isSuccess) {
-          const errorMsg = data.mensaje || data.message || data.error || t.loginAuthFailed;
+          const backendError = data.mensaje || data.message || data.error || '';
+          const errorMsg = friendlyBackendError(backendError, t.loginAuthFailed);
           showLockedNotice(errorMsg);
           return;
         }
