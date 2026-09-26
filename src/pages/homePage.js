@@ -5,6 +5,7 @@ import {
   getUserPlanFromSupabase,
   getFeaturedArticlesFromSupabase,
   getRecipesFromSupabase,
+  getFeaturedRecipeFromSupabase,
   getProtocolsFromSupabase,
   getEducationalModulesFromSupabase
 } from '../services/supabaseClient.js';
@@ -827,10 +828,11 @@ async function fetchFeaturedArticle(language = 'es') {
 
 async function fetchFeaturedRecipe(language = 'es') {
   try {
-    const recipes = await getRecipesFromSupabase(60, 0, language);
-    // Selección 100% editorial vía "destacada" en Supabase. Sin fallback:
+    // Selección 100% editorial vía "destacada" en Supabase, filtrada en la
+    // propia query (antes se buscaba solo entre las 60 más recientes, y con
+    // cientos de recetas la destacada casi nunca caía ahí). Sin fallback:
     // si nadie la marcó, el bloque se omite (nunca "próximamente").
-    return recipes.find((recipe) => recipe.featured) || null;
+    return await getFeaturedRecipeFromSupabase(language);
   } catch (error) {
     console.error('Feed: error obteniendo receta destacada', error);
     return null;

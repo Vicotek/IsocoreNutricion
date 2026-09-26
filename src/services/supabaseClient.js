@@ -666,6 +666,36 @@ export async function getRecipesFromSupabase(limit = 999, offset = 0, language =
 }
 
 /**
+ * Obtener la receta destacada (destacada=true), filtrando directo en la
+ * query en vez de pedir "las N más recientes" y buscar entre ellas —
+ * con cientos de recetas, la destacada casi nunca cae en ese rango.
+ * @returns {Promise<Object|null>} - Receta destacada o null si nadie marcó una
+ */
+export async function getFeaturedRecipeFromSupabase(language = 'es') {
+  try {
+    const response = await fetch(
+      `${API_URL}/recetas?destacada=eq.true&order=fecha_creacion.desc&limit=1&select=*`,
+      {
+        method: 'GET',
+        headers: AUTH_HEADER
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`❌ Error obteniendo receta destacada (${response.status})`);
+      return null;
+    }
+
+    const data = await response.json();
+    const row = Array.isArray(data) ? data[0] : null;
+    return row ? normalizeRecipeRow(row, language) : null;
+  } catch (error) {
+    console.error('❌ Error obteniendo receta destacada:', error);
+    return null;
+  }
+}
+
+/**
  * Obtener una receta específica por ID
  * @param {string} recipeId - ID de la receta
  * @returns {Promise<Object|null>} - Objeto de la receta o null
