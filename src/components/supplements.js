@@ -60,7 +60,15 @@ function createResultCard(item) {
 }
 
 function renderRelated(items) {
+  const section = elements.relatedGrid?.closest('.related-section');
   elements.relatedGrid.innerHTML = '';
+
+  if (!items || items.length === 0) {
+    if (section) section.classList.add('hidden');
+    return;
+  }
+
+  if (section) section.classList.remove('hidden');
   items.forEach((item) => {
     const card = document.createElement('div');
     card.className = 'related-card';

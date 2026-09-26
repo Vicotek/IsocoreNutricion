@@ -30,6 +30,7 @@ import * as AIPage from './aiPage.js';
 import * as AdminPage from './adminPage.js';
 import * as DiabetesPage from './diabetesPage.js';
 import * as SmartCenterPage from './smartCenterPage.js';
+import * as SupplementsPage from './supplementsPage.js';
 
 const STORAGE_KEY = 'isocore_home_user';
 const BACKEND_BASE_URL = 'https://n8n.srv1569124.hstgr.cloud/webhook';
@@ -1563,6 +1564,14 @@ window.homePage_navigateToSmartCenter = () => {
 };
 
 /**
+ * Navegar al módulo de Suplementos
+ */
+window.homePage_navigateToSupplements = () => {
+  console.log('💊 Navegando a Suplementos');
+  SupplementsPage.renderSupplementsPage();
+};
+
+/**
  * Navegar a Administración
  * ✅ VALIDAR PERMISOS - Solo admin puede acceder
  */
@@ -1974,6 +1983,9 @@ function initHomeInteractions(t) {
             // Módulo "IA" — mismo destino que el CTA de "Pregunta a tu
             // asistente nutricional" del dashboard (aiPage.js)
             window.homePage_navigateToAI();
+            return;
+          case 'supplements':
+            window.homePage_navigateToSupplements();
             return;
           // Aquí se pueden agregar más módulos con navegación especial
           default:

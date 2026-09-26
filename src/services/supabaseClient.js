@@ -1530,6 +1530,57 @@ export async function getFeaturedSupplementsFromSupabase(limit = 5) {
   }
 }
 
+/**
+ * Normaliza una fila de `catalogo_suplementos` a la forma que espera la UI
+ * de la página de Suplementos (components/supplements.js).
+ */
+function normalizeSupplementRow(row) {
+  if (!row) return row;
+  return {
+    id: row.id,
+    icon: '💊',
+    title: row.nombre,
+    summary: row.funcion_principal || '',
+    purpose: row.funcion_principal || '',
+    when: row.dosis_texto ? `Dosis de referencia: ${row.dosis_texto}` : 'Consulta la ficha técnica para la dosis recomendada.',
+    evidence: [row.tipo, row.presentacion].filter(Boolean).join(' — '),
+    precautions: row.notas || 'Consulta siempre con tu experta antes de combinar suplementos o iniciar uno nuevo.',
+    related: []
+  };
+}
+
+/**
+ * Obtener el catálogo real de suplementos (incluye la gama Zinzino ya
+ * cargada) desde `public.catalogo_suplementos`.
+ * @returns {Promise<Array>} - Array de suplementos, forma lista para la UI
+ */
+export async function getSupplementsCatalogFromSupabase() {
+  try {
+    console.log('💊 Obteniendo catálogo de suplementos desde Supabase...');
+
+    const response = await fetch(
+      `${API_URL}/catalogo_suplementos?activo=eq.true&order=nombre.asc&select=*`,
+      {
+        method: 'GET',
+        headers: AUTH_HEADER
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`❌ Error obteniendo catálogo de suplementos (${response.status})`);
+      return [];
+    }
+
+    const data = await response.json();
+    const rows = Array.isArray(data) ? data : [];
+    console.log(`✅ ${rows.length} suplementos cargados desde Supabase`);
+    return rows.map(normalizeSupplementRow);
+  } catch (error) {
+    console.error('❌ Error obteniendo catálogo de suplementos:', error);
+    return [];
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════════════
 // 🔐 GESTIÓN DE ROLES - Control de acceso a funcionalidades
 // ═════════════════════════════════════════════════════════════════════════

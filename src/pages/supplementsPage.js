@@ -6,7 +6,7 @@ export function renderSupplementsPage() {
     <main class="page-shell">
       <section class="section header-section">
         <div class="header-line">
-          <button class="ghost-button" type="button">← Centro</button>
+          <button class="ghost-button" type="button" id="supplementsBackBtn">← Centro</button>
         </div>
         <div class="page-title-block">
           <p class="eyebrow">Suplementos</p>
@@ -57,15 +57,15 @@ export function renderSupplementsPage() {
             <p id="detailPurpose"></p>
           </div>
           <div class="detail-block">
-            <h3>¿Cuándo puede ser útil?</h3>
+            <h3>Dosis de referencia</h3>
             <p id="detailWhen"></p>
           </div>
           <div class="detail-block">
-            <h3>Nivel de evidencia científica</h3>
+            <h3>Tipo y presentación</h3>
             <p id="detailEvidence"></p>
           </div>
           <div class="detail-block">
-            <h3>Precauciones generales</h3>
+            <h3>Notas y precauciones</h3>
             <p id="detailPrecautions"></p>
           </div>
           <div class="detail-note">
@@ -84,6 +84,10 @@ export function renderSupplementsPage() {
       </div>
     </aside>
   `;
+
+  document.getElementById('supplementsBackBtn')?.addEventListener('click', () => {
+    window.homePage_goHome();
+  });
 
   initSupplementsModule();
 }
