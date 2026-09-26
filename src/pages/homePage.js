@@ -1027,6 +1027,38 @@ function handleFeedClick(event) {
     } else {
       showLockedNotice('Sección en desarrollo');
     }
+    return;
+  }
+
+  // Botones de las tarjetas del dashboard ("Continuar donde lo dejaste",
+  // última receta/recurso/suplemento, próxima recomendación) — antes no
+  // tenían ningún listener, así que no hacían nada.
+  const cardTarget = event.target.closest('[data-card-type]');
+  if (cardTarget) {
+    const cardType = cardTarget.dataset.cardType;
+    switch (cardType) {
+      case 'continue':
+        navigateByActivityType(cardTarget.dataset.activityType);
+        return;
+      case 'supplement':
+        window.homePage_navigateToSupplements();
+        return;
+      case 'resource':
+        window.homePage_navigateToArticles();
+        return;
+      case 'recipe':
+        // No hay todavía catálogo de recetas propio (item pendiente del
+        // backlog) — mensaje honesto en vez de fingir una navegación.
+        showLockedNotice('El catálogo de recetas está en construcción. Muy pronto podrás explorarlo desde aquí.');
+        return;
+      case 'recommendation':
+        // Sin motor de recomendación real todavía (item pendiente del
+        // backlog) — mismo criterio: no fingir que hace algo.
+        showLockedNotice('El motor de recomendaciones está en construcción.');
+        return;
+      default:
+        showLockedNotice('Sección en desarrollo');
+    }
   }
 }
 
@@ -1232,16 +1264,52 @@ async function renderDashboard(dashboard) {
  * @returns {string} - HTML de la tarjeta
  */
 function createCardHTML(card) {
+  // card.icon no existe en los objetos que arma buildCards() (usan
+  // iconName) — el icono nunca se pintaba. Se usa getIconSVG como
+  // fallback consistente con el resto del feed.
+  const icon = card.icon || getIconSVG(card.iconName, 22);
+  const activityType = card.data?.type || '';
+  const activityId = card.data?.resource_id ?? card.data?.id ?? '';
   return `
     <div class="dashboard-card dashboard-card-${card.type}">
-      <div class="card-icon">${card.icon}</div>
+      <div class="card-icon">${icon}</div>
       <div class="card-content">
         <h4 class="card-title">${card.title}</h4>
         <p class="card-subtitle">${card.subtitle}</p>
       </div>
-      <button class="card-cta" data-card-type="${card.type}">${card.cta}</button>
+      <button class="card-cta" data-card-type="${card.type}" data-activity-type="${escapeHtml(activityType)}" data-activity-id="${escapeHtml(String(activityId))}">${card.cta}</button>
     </div>
   `;
+}
+
+/**
+ * A dónde navegar desde la tarjeta "Continuar donde lo dejaste", según el
+ * tipo de actividad registrado (ver logActivity).
+ */
+function navigateByActivityType(type) {
+  switch (type) {
+    case 'article':
+    case 'resource':
+      window.homePage_navigateToArticles();
+      return;
+    case 'diabetes':
+      window.homePage_navigateToDiabetes();
+      return;
+    case 'plan':
+      window.homePage_navigateToProfile('objetivos');
+      return;
+    case 'center':
+      window.homePage_navigateToSmartCenter();
+      return;
+    case 'ai':
+      window.homePage_navigateToAI();
+      return;
+    case 'supplement':
+      window.homePage_navigateToSupplements();
+      return;
+    default:
+      showLockedNotice('No pudimos identificar dónde lo dejaste. Explora desde el menú.');
+  }
 }
 
 /**
