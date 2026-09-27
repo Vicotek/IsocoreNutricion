@@ -97,8 +97,10 @@ export function getRecipes(limit = 999, offset = 0) {
  */
 export function getRecipe(recipeId) {
   if (!recipeId) return null;
-  
-  const recipe = recipesCache.find(r => r.id === recipeId);
+
+  // id en Supabase es bigint (number); recipeId suele llegar como string
+  // desde un dataset del DOM — comparar con === nunca coincidía.
+  const recipe = recipesCache.find(r => String(r.id) === String(recipeId));
   
   if (!recipe) {
     console.warn(`⚠️ Receta ${recipeId} no encontrada en cache`);

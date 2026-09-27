@@ -32,6 +32,7 @@ import * as AdminPage from './adminPage.js';
 import * as DiabetesPage from './diabetesPage.js';
 import * as SmartCenterPage from './smartCenterPage.js';
 import * as SupplementsPage from './supplementsPage.js';
+import * as RecipesPage from './recipesPage.js';
 
 const STORAGE_KEY = 'isocore_home_user';
 const BACKEND_BASE_URL = 'https://n8n.srv1569124.hstgr.cloud/webhook';
@@ -1050,9 +1051,7 @@ function handleFeedClick(event) {
         window.homePage_navigateToArticles();
         return;
       case 'recipe':
-        // No hay todavía catálogo de recetas propio (item pendiente del
-        // backlog) — mensaje honesto en vez de fingir una navegación.
-        showLockedNotice('El catálogo de recetas está en construcción. Muy pronto podrás explorarlo desde aquí.');
+        window.homePage_navigateToRecipes();
         return;
       case 'recommendation':
         // Recomienda contenido del mismo tipo que la última actividad
@@ -1310,6 +1309,9 @@ function navigateByActivityType(type) {
       return;
     case 'supplement':
       window.homePage_navigateToSupplements();
+      return;
+    case 'recipe':
+      window.homePage_navigateToRecipes();
       return;
     default:
       showLockedNotice('No pudimos identificar dónde lo dejaste. Explora desde el menú.');
@@ -1664,6 +1666,14 @@ window.homePage_navigateToSmartCenter = () => {
 window.homePage_navigateToSupplements = () => {
   console.log('💊 Navegando a Suplementos');
   SupplementsPage.renderSupplementsPage();
+};
+
+/**
+ * Navegar al módulo de Recetas
+ */
+window.homePage_navigateToRecipes = () => {
+  console.log('🍽️ Navegando a Recetas');
+  RecipesPage.renderRecipesPage();
 };
 
 /**
@@ -2087,6 +2097,10 @@ function initHomeInteractions(t) {
           case 'supplements':
             logActivity('supplement', moduleTitle, null);
             window.homePage_navigateToSupplements();
+            return;
+          case 'recipes':
+            logActivity('recipe', moduleTitle, null);
+            window.homePage_navigateToRecipes();
             return;
           // Aquí se pueden agregar más módulos con navegación especial
           default:
