@@ -20,7 +20,9 @@ const ENDPOINTS = {
   obtenerCaso: `${BACKEND_BASE_URL}/revision-obtener-caso`,
   guardarCambios: `${BACKEND_BASE_URL}/revision-guardar-cambios`,
   aprobar: `${BACKEND_BASE_URL}/revision-aprobar`,
-  rechazar: `${BACKEND_BASE_URL}/revision-rechazar`
+  rechazar: `${BACKEND_BASE_URL}/revision-rechazar`,
+  seguimientoGet: `${BACKEND_BASE_URL}/revision-seguimiento-get`,
+  seguimientoGuardar: `${BACKEND_BASE_URL}/revision-seguimiento-guardar`
 };
 
 async function postToWebhook(url, payload) {
@@ -85,6 +87,34 @@ export async function rechazarPlan(planId, motivo) {
   return postToWebhook(ENDPOINTS.rechazar, { planId, motivo });
 }
 
+/**
+ * → wf-revision-seguimiento-get (nuevo, a crear)
+ * A diferencia de diabetesService.getSeguimiento (que solo puede leer el
+ * seguimiento del propio usuario autenticado), esta función deja que una
+ * experta lea el seguimiento de OTRO usuario — por eso vive en un endpoint
+ * separado, que debe verificar que el token pertenece a un experto activo
+ * (diabetes.expertos.activo = true) antes de devolver nada, en vez de
+ * comparar el token contra el usuarioId como hace la ruta del paciente.
+ * @param {string} usuarioId - id del paciente cuyo caso se está revisando
+ * @returns {Promise<Array>} - filas de diabetes.seguimiento, la más reciente primero
+ */
+export async function getSeguimientoPaciente(usuarioId) {
+  const data = await postToWebhook(ENDPOINTS.seguimientoGet, { usuarioId });
+  return Array.isArray(data) ? data : (data?.registros || []);
+}
+
+/**
+ * → wf-revision-seguimiento-guardar (nuevo, a crear)
+ * Inserta un registro nuevo (peso/HbA1c/adherencia/notas) para el paciente
+ * indicado. Mismo requisito de seguridad que arriba: resolver la experta a
+ * partir del token, nunca fiarse de un rol que llegue en el body.
+ * @param {string} usuarioId
+ * @param {{fecha_registro:string, peso_kg?:number|null, hba1c?:number|null, adherencia?:number|null, notas?:string|null}} data
+ */
+export async function guardarSeguimientoPaciente(usuarioId, data) {
+  return postToWebhook(ENDPOINTS.seguimientoGuardar, { usuarioId, data });
+}
+
 /*
  * ═══════════════════════════════════════════════════════════════════════
  * CONTRATO ESPERADO (además de wf-revision-obtener-caso / guardar-cambios /
@@ -101,5 +131,17 @@ export async function rechazarPlan(planId, motivo) {
  * experto a partir del token (nunca fiarse de un rol que llegue en el
  * body), y solo entonces tocar diabetes.planes_nutricionales /
  * diabetes.revisiones_plan con la service_role key.
+ *
+ * POST /webhook/diabetes/revision/seguimiento/get
+ *   body: { token, usuarioId }
+ *   n8n: verificar experto activo a partir del token. Responde un array de
+ *   diabetes.seguimiento del usuarioId indicado, más reciente primero:
+ *   [{ id, fecha_registro, peso_kg, hba1c, adherencia, notas, registrado_por }]
+ *
+ * POST /webhook/diabetes/revision/seguimiento/guardar
+ *   body: { token, usuarioId, data: { fecha_registro, peso_kg, hba1c, adherencia, notas } }
+ *   n8n: verificar experto activo, insertar fila en diabetes.seguimiento con
+ *   registrado_por = id del experto resuelto desde el token (nunca desde el
+ *   body). Responde la fila insertada.
  * ═══════════════════════════════════════════════════════════════════════
  */

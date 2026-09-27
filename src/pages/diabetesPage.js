@@ -37,6 +37,7 @@ let formData = {
   habitos: {}
 };
 let ultimoPlan = null;
+let seguimientoData = [];
 let saveStatus = '';
 
 const STEPS = [
@@ -306,17 +307,19 @@ function renderLockedView() {
 
 async function loadExistingData() {
   const usuarioId = usuarioActual.id;
-  const [personal, historial, habitos, plan] = await Promise.all([
+  const [personal, historial, habitos, plan, seguimiento] = await Promise.all([
     DiabetesService.getDatosPersonales(usuarioId),
     DiabetesService.getHistorialMedico(usuarioId),
     DiabetesService.getHabitosPaciente(usuarioId),
-    DiabetesService.getUltimoPlan(usuarioId)
+    DiabetesService.getUltimoPlan(usuarioId),
+    DiabetesService.getSeguimiento(usuarioId)
   ]);
 
   formData.personal = personal || {};
   formData.historial = historial || {};
   formData.habitos = habitos || {};
   ultimoPlan = plan || null;
+  seguimientoData = Array.isArray(seguimiento) ? seguimiento : [];
 }
 
 /**
@@ -334,6 +337,7 @@ function renderFormShell() {
       </div>
 
       ${ultimoPlan ? renderPlanStatusHTML() : ''}
+      ${renderSeguimientoHTML()}
 
       <div class="diabetes-form-card">
         <div class="diabetes-steps" id="diabetesSteps"></div>
@@ -369,6 +373,68 @@ function renderPlanStatusHTML() {
         : `<p style="margin:0; color:var(--text-secondary);">${renderPlanContenidoHTML(estado)}</p>`}
     </div>
   `;
+}
+
+/**
+ * "Tu seguimiento" — solo lectura para el paciente. Los registros (peso,
+ * HbA1c, adherencia) los añade la experta desde adminRevisionPage.js en
+ * cada revisión; el paciente aquí solo ve su propia evolución.
+ * Se omite por completo si aún no hay ningún registro, en vez de mostrar
+ * una tarjeta vacía.
+ */
+function renderSeguimientoHTML() {
+  if (!seguimientoData || seguimientoData.length === 0) return '';
+
+  const ordenado = [...seguimientoData].sort((a, b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
+  const ultimo = ordenado[0];
+
+  const macroItems = [
+    { label: 'Peso más reciente', value: ultimo.peso_kg, suffix: ' kg' },
+    { label: 'HbA1c más reciente', value: ultimo.hba1c, suffix: '%' },
+    { label: 'Adherencia', value: ultimo.adherencia, suffix: '/5' }
+  ].filter(item => item.value !== undefined && item.value !== null);
+
+  return `
+    <div class="diabetes-plan-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <h3 style="margin:0; color:var(--text-primary);">${getIcon('chart', 16)} Tu seguimiento</h3>
+        <span style="font-size:0.8rem; color:var(--text-secondary);">Registrado por tu experta</span>
+      </div>
+      ${macroItems.length ? `
+        <div class="plan-final-macros">
+          ${macroItems.map(item => `
+            <div class="plan-final-macro">
+              <span class="plan-final-macro-value">${escapeHtmlPlan(item.value)}${item.suffix}</span>
+              <span class="plan-final-macro-label">${item.label}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      <table class="seguimiento-table">
+        <thead>
+          <tr><th>Fecha</th><th>Peso</th><th>HbA1c</th><th>Adherencia</th><th>Notas</th></tr>
+        </thead>
+        <tbody>
+          ${ordenado.map(entry => `
+            <tr>
+              <td>${formatFechaSeguimiento(entry.fecha_registro)}</td>
+              <td>${entry.peso_kg != null ? `${escapeHtmlPlan(entry.peso_kg)} kg` : '-'}</td>
+              <td>${entry.hba1c != null ? `${escapeHtmlPlan(entry.hba1c)}%` : '-'}</td>
+              <td>${entry.adherencia != null ? `${escapeHtmlPlan(entry.adherencia)}/5` : '-'}</td>
+              <td>${entry.notas ? escapeHtmlPlan(entry.notas) : '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function formatFechaSeguimiento(value) {
+  if (!value) return '-';
+  const fecha = new Date(value);
+  if (Number.isNaN(fecha.getTime())) return escapeHtmlPlan(value);
+  return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function renderPlanContenidoHTML(estado) {

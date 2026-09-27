@@ -35,6 +35,7 @@ const CAMPOS_PLAN = [
 
 let currentPlanId = null;
 let currentContenido = null;
+let currentUsuarioId = null;
 
 function parseContenido(raw) {
   if (!raw) return {};
@@ -114,6 +115,7 @@ export async function abrirCasoDetalle(planId, listContainerId = 'diabetesRevisi
 
   const { plan, historial_medico: historial } = data;
   currentPlanId = plan.plan_id;
+  currentUsuarioId = plan.usuario_id;
   currentContenido = parseContenido(plan.contenido_final || plan.contenido_ia);
   const fuentes = Array.isArray(plan.fuentes_usadas) ? plan.fuentes_usadas : [];
   const notasSeguridad = currentContenido.notas_seguridad;
@@ -165,6 +167,33 @@ export async function abrirCasoDetalle(planId, listContainerId = 'diabetesRevisi
           <textarea id="revisionComentarios" class="revision-block-textarea" placeholder="Notas internas, no visibles para el paciente...">${plan.comentarios || ''}</textarea>
         </div>
 
+        <div class="revision-block" id="revisionSeguimientoBlock">
+          <div class="revision-block-header">
+            <p class="revision-block-label">${getIcon('chart', 14)} Seguimiento clínico</p>
+          </div>
+          <div id="revisionSeguimientoList"><p class="loading">Cargando registros...</p></div>
+          <form id="revisionSeguimientoForm" class="seguimiento-form">
+            <div class="seguimiento-form-row">
+              <label>Fecha
+                <input type="date" id="segFecha" required value="${new Date().toISOString().slice(0, 10)}" />
+              </label>
+              <label>Peso (kg)
+                <input type="number" step="0.1" id="segPeso" placeholder="68.5" />
+              </label>
+              <label>HbA1c (%)
+                <input type="number" step="0.1" id="segHba1c" placeholder="6.8" />
+              </label>
+              <label>Adherencia (1-5)
+                <input type="number" min="1" max="5" step="1" id="segAdherencia" placeholder="4" />
+              </label>
+            </div>
+            <label class="seguimiento-form-notas">Notas de esta revisión
+              <textarea id="segNotas" class="revision-block-textarea" placeholder="Observaciones, cambios respecto a la revisión anterior..."></textarea>
+            </label>
+            <button type="submit" class="admin-btn primary" id="segGuardarBtn">${getIcon('save', 14)} Añadir registro</button>
+          </form>
+        </div>
+
         <div class="revision-actions">
           <button class="admin-btn danger" id="revisionRechazarBtn">${getIcon('close', 14)} Rechazar</button>
           <button class="admin-btn" id="revisionGuardarBtn">${getIcon('save', 14)} Guardar cambios</button>
@@ -184,6 +213,96 @@ export async function abrirCasoDetalle(planId, listContainerId = 'diabetesRevisi
   document.getElementById('revisionGuardarBtn')?.addEventListener('click', () => handleGuardar(detailEl));
   document.getElementById('revisionAprobarBtn')?.addEventListener('click', () => handleAprobar(detailEl, listContainerId, detailContainerId));
   document.getElementById('revisionRechazarBtn')?.addEventListener('click', () => handleRechazar(detailEl, listContainerId, detailContainerId));
+
+  document.getElementById('revisionSeguimientoForm')?.addEventListener('submit', (event) => handleGuardarSeguimiento(event, plan.usuario_id));
+  loadSeguimiento(plan.usuario_id);
+}
+
+/**
+ * Carga y pinta el histórico de seguimiento del paciente cuyo caso está
+ * abierto. Se llama al abrir el caso y de nuevo tras guardar un registro
+ * nuevo, para refrescar la lista sin recargar toda la pantalla.
+ */
+async function loadSeguimiento(usuarioId) {
+  const listEl = document.getElementById('revisionSeguimientoList');
+  if (!listEl || !usuarioId) return;
+  listEl.innerHTML = '<p class="loading">Cargando registros...</p>';
+  const entries = await AdminDiabetesService.getSeguimientoPaciente(usuarioId);
+  // Puede que la experta ya haya navegado a otro caso mientras esto cargaba
+  if (currentUsuarioId !== usuarioId) return;
+  listEl.innerHTML = renderSeguimientoListHTML(entries);
+}
+
+function renderSeguimientoListHTML(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return '<p class="seguimiento-empty">Todavía no hay registros de seguimiento para este paciente.</p>';
+  }
+  const ordenado = [...entries].sort((a, b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
+  return `
+    <table class="seguimiento-table">
+      <thead>
+        <tr><th>Fecha</th><th>Peso</th><th>HbA1c</th><th>Adherencia</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        ${ordenado.map(entry => `
+          <tr>
+            <td>${formatFechaSeguimiento(entry.fecha_registro)}</td>
+            <td>${entry.peso_kg != null ? `${entry.peso_kg} kg` : '-'}</td>
+            <td>${entry.hba1c != null ? `${entry.hba1c}%` : '-'}</td>
+            <td>${entry.adherencia != null ? `${entry.adherencia}/5` : '-'}</td>
+            <td>${entry.notas || '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function formatFechaSeguimiento(value) {
+  if (!value) return '-';
+  const fecha = new Date(value);
+  if (Number.isNaN(fecha.getTime())) return value;
+  return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function handleGuardarSeguimiento(event, usuarioId) {
+  event.preventDefault();
+  if (!usuarioId) return;
+
+  const fecha = document.getElementById('segFecha')?.value;
+  if (!fecha) {
+    alert('La fecha es obligatoria.');
+    return;
+  }
+
+  const data = {
+    fecha_registro: fecha,
+    peso_kg: numberOrNull('segPeso'),
+    hba1c: numberOrNull('segHba1c'),
+    adherencia: numberOrNull('segAdherencia'),
+    notas: document.getElementById('segNotas')?.value?.trim() || null
+  };
+
+  const btn = document.getElementById('segGuardarBtn');
+  if (btn) btn.disabled = true;
+
+  const result = await AdminDiabetesService.guardarSeguimientoPaciente(usuarioId, data);
+
+  if (btn) btn.disabled = false;
+  if (!result) {
+    alert('No se pudo guardar el registro. Inténtalo de nuevo.');
+    return;
+  }
+
+  document.getElementById('revisionSeguimientoForm')?.reset();
+  const segFechaInput = document.getElementById('segFecha');
+  if (segFechaInput) segFechaInput.value = new Date().toISOString().slice(0, 10);
+  await loadSeguimiento(usuarioId);
+}
+
+function numberOrNull(elementId) {
+  const raw = document.getElementById(elementId)?.value;
+  return raw ? Number(raw) : null;
 }
 
 export function volverALista(listContainerId = 'diabetesRevisionList', detailContainerId = 'diabetesRevisionDetail') {
@@ -191,6 +310,7 @@ export function volverALista(listContainerId = 'diabetesRevisionList', detailCon
   document.getElementById(listContainerId)?.classList.remove('is-hidden');
   currentPlanId = null;
   currentContenido = null;
+  currentUsuarioId = null;
 }
 
 function renderAlertaSeguridad(notas, puntos) {

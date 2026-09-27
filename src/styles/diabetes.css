@@ -598,6 +598,92 @@
   box-shadow: 0 0 0 3px var(--brand-mid-faint);
 }
 
+/* ── Seguimiento (peso / HbA1c / adherencia) — tabla + formulario,
+   compartido entre la vista de la experta (adminRevisionPage.js) y la
+   vista de solo lectura del paciente (diabetesPage.js) ── */
+
+.seguimiento-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.seguimiento-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.seguimiento-table th,
+.seguimiento-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.seguimiento-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.seguimiento-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.seguimiento-form {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.seguimiento-form-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.seguimiento-form-row label,
+.seguimiento-form-notas {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.seguimiento-form-row input,
+.seguimiento-form-notas textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 12px);
+  padding: 9px 11px;
+}
+
+.seguimiento-form-row input:focus,
+.seguimiento-form-notas textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-mid-faint);
+}
+
+@media (max-width: 640px) {
+  .seguimiento-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .seguimiento-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
 .revision-comentarios {
   display: grid;
   gap: 6px;
