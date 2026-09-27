@@ -844,8 +844,11 @@ async function fetchFeaturedProtocol(language = 'es') {
     // "protocolos" no tiene columna editorial de selección ni de nivel de
     // acceso: se usa el más reciente como proxy (acordado, sin tocar esquema)
     // y se trata como contenido premium por defecto.
+    // Se descartan los protocolos de prueba (título con prefijo "[DEMO]")
+    // para no mostrar contenido de mentira como si fuera destacado — mismo
+    // criterio que recetas/artículos: sin contenido real, se omite el bloque.
     const protocols = await getProtocolsFromSupabase(5, 0, language);
-    const protocol = protocols && protocols[0];
+    const protocol = protocols?.find((item) => !/^\s*\[demo\]/i.test(item.title || ''));
     return protocol ? { ...protocol, tier: 'premium' } : null;
   } catch (error) {
     console.error('Feed: error obteniendo protocolo destacado', error);
