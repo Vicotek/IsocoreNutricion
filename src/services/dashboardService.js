@@ -8,7 +8,10 @@ import {
   getUserFromSupabase,
   getRecentActivityFromSupabase,
   getFavoritesFromSupabase,
-  saveActivityToSupabase
+  saveActivityToSupabase,
+  getFeaturedArticlesFromSupabase,
+  getEducationalModulesFromSupabase,
+  getSupplementsCatalogFromSupabase
 } from './supabaseClient.js';
 import { getAuthToken } from './authService.js';
 import { getIcon } from '../components/icons.js';
@@ -77,7 +80,7 @@ export async function loadDashboard(email) {
       favorites: favorites || [],
       objective: extractObjective(user) || 'Optimizar nutrición y salud',
       progress: calculateProgress(recentActivity) || 0,
-      cards: buildCards(recentActivity, favorites)
+      cards: await buildCards(recentActivity, favorites)
     };
 
     // Cachear datos
@@ -133,12 +136,51 @@ export async function updateRecentActivity(email, activity) {
 }
 
 /**
+ * Elige un candidato de contenido para "Próxima recomendación", en base
+ * al tipo de la última actividad registrada. Evita repetir el propio
+ * elemento que se acaba de ver o algo ya guardado en favoritos.
+ * Tipos de actividad que no son contenido navegable (diabetes, plan,
+ * center, ai) caen al valor por defecto: artículo.
+ */
+async function fetchRecommendationCandidate(lastActivity, favorites = []) {
+  const excludeIds = new Set(
+    [lastActivity?.resource_id, lastActivity?.id].filter(Boolean).map(String)
+  );
+  const favoriteIds = new Set((favorites || []).map((f) => String(f.resource_id ?? f.id)));
+
+  try {
+    if (lastActivity?.type === 'resource') {
+      const modules = await getEducationalModulesFromSupabase('published');
+      const pick = modules.find((m) => !excludeIds.has(String(m.id)) && !favoriteIds.has(String(m.id)));
+      if (pick) return { navType: 'resource', id: pick.id, title: pick.title, subtitle: 'Recurso recomendado para ti' };
+    }
+
+    if (lastActivity?.type === 'supplement') {
+      const supplements = await getSupplementsCatalogFromSupabase();
+      const pick = supplements.find((s) => !excludeIds.has(String(s.id)) && !favoriteIds.has(String(s.id)));
+      if (pick) return { navType: 'supplement', id: pick.id, title: pick.title, subtitle: 'Suplemento recomendado para ti' };
+    }
+
+    // Por defecto (incluye 'article' y cualquier tipo de actividad que no
+    // sea un catálogo de contenido navegable: diabetes, plan, center, ai)
+    const articles = await getFeaturedArticlesFromSupabase(5);
+    const pick = articles.find((a) => !excludeIds.has(String(a.id)) && !favoriteIds.has(String(a.id)));
+    if (pick) return { navType: 'article', id: pick.id, title: pick.title, subtitle: 'Artículo recomendado para ti' };
+
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo recomendación:', error);
+    return null;
+  }
+}
+
+/**
  * Construye las tarjetas del dashboard
  * @param {Array} recentActivity - Actividad reciente
  * @param {Array} favorites - Favoritos/guardados
- * @returns {Array} - Array de tarjetas
+ * @returns {Promise<Array>} - Array de tarjetas
  */
-function buildCards(recentActivity = [], favorites = []) {
+async function buildCards(recentActivity = [], favorites = []) {
   const cards = [];
 
   // Tarjeta 1: Continuar donde lo dejó
@@ -196,15 +238,20 @@ function buildCards(recentActivity = [], favorites = []) {
     });
   }
 
-  // Tarjeta 5: Próxima recomendación
-  cards.push({
-    type: 'recommendation',
-    title: 'Próxima Recomendación',
-    subtitle: 'Basada en tu actividad',
-    iconName: 'spark',
-    cta: 'Explorar',
-    data: null
-  });
+  // Tarjeta 5: Próxima recomendación — continúa el interés de la última
+  // actividad registrada (mismo tipo de contenido, algo que aún no viste).
+  // Sin actividad todavía, recomienda un artículo destacado por defecto.
+  const recommendation = await fetchRecommendationCandidate(lastSession, favorites);
+  if (recommendation) {
+    cards.push({
+      type: 'recommendation',
+      title: 'Próxima Recomendación',
+      subtitle: recommendation.title || 'Basada en tu actividad',
+      iconName: 'spark',
+      cta: 'Explorar',
+      data: { type: recommendation.navType, resource_id: recommendation.id }
+    });
+  }
 
   return cards;
 }

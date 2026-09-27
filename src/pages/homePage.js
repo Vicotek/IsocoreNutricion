@@ -1055,9 +1055,10 @@ function handleFeedClick(event) {
         showLockedNotice('El catálogo de recetas está en construcción. Muy pronto podrás explorarlo desde aquí.');
         return;
       case 'recommendation':
-        // Sin motor de recomendación real todavía (item pendiente del
-        // backlog) — mismo criterio: no fingir que hace algo.
-        showLockedNotice('El motor de recomendaciones está en construcción.');
+        // Recomienda contenido del mismo tipo que la última actividad
+        // (dashboardService.fetchRecommendationCandidate); navega igual
+        // que "Continuar donde lo dejaste".
+        navigateByActivityType(cardTarget.dataset.activityType);
         return;
       default:
         showLockedNotice('Sección en desarrollo');
